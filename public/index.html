@@ -130,6 +130,8 @@
     <script>
         // ===== 비밀번호 인증 =====
         const PASSWORD = "sunjin04!";
+        const PROJECT_ID = "dash-2132d";
+        const API_KEY = "AIzaSyCuvVMvhLE9i8sIEyRc0GR9m18RFQdDHpQ";
 
         function checkAuth() {
             const token = localStorage.getItem('pankwanbi_auth');
@@ -162,16 +164,6 @@
             document.getElementById('root').innerHTML = '';
         }
 
-        // Firebase Config
-        const firebaseConfig = {
-            apiKey: "AIzaSyCuvVMvhLE9i8sIEyRc0GR9m18RFQdDHpQ",
-            authDomain: "dash-2132d.firebaseapp.com",
-            projectId: "dash-2132d",
-            storageBucket: "dash-2132d.firebasestorage.app",
-            messagingSenderId: "710544948136",
-            appId: "1:710544948136:web:410569304052cc5137fb9d"
-        };
-
         // 상태 관리
         let allAccounts = [];
         let filteredAccounts = [];
@@ -183,13 +175,39 @@
             fetchAccounts();
         }
 
-        // API 호출
+        // Firestore 맵 데이터 변환
+        function convertFirestoreValue(value) {
+            if (value.stringValue) return value.stringValue;
+            if (value.integerValue) return parseInt(value.integerValue);
+            if (value.mapValue) return convertFirestoreMap(value.mapValue.fields || {});
+            if (value.arrayValue) return (value.arrayValue.values || []).map(convertFirestoreValue);
+            return null;
+        }
+
+        function convertFirestoreMap(fields) {
+            const obj = {};
+            Object.entries(fields).forEach(([key, value]) => {
+                obj[key] = convertFirestoreValue(value);
+            });
+            return obj;
+        }
+
+        // Firebase REST API 호출
         async function fetchAccounts() {
             try {
-                const response = await fetch('/api/accounts');
+                const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/accounts?key=${API_KEY}`;
+                const response = await fetch(url);
                 const data = await response.json();
-                allAccounts = data;
-                filteredAccounts = data;
+
+                const accounts = (data.documents || []).map(doc => ({
+                    id: doc.name.split('/').pop(),
+                    code: doc.fields.code?.stringValue || '',
+                    name: doc.fields.name?.stringValue || '',
+                    data: convertFirestoreMap(doc.fields.data?.mapValue?.fields || {})
+                }));
+
+                allAccounts = accounts;
+                filteredAccounts = accounts;
                 renderAccounts();
                 updateStats();
             } catch (error) {
@@ -201,8 +219,11 @@
 
         async function fetchMetadata() {
             try {
-                const response = await fetch('/api/metadata');
-                const data = await response.json();
+                const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/metadata/system?key=${API_KEY}`;
+                const response = await fetch(url);
+                const doc = await response.json();
+
+                const data = convertFirestoreMap(doc.fields || {});
                 document.getElementById('totalAccounts').textContent = data.totalAccounts || '-';
                 document.getElementById('totalDepts').textContent = data.totalDepartments || '-';
                 document.getElementById('version').textContent = data.version || '-';
