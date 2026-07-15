@@ -12,55 +12,39 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
-        .accordion-content.active { max-height: 5000px; }
-
-        .number-cell { text-align: right; font-family: 'Courier New', monospace; font-size: 0.85rem; }
+        .number-cell { text-align: right; font-family: 'Courier New', monospace; }
 
         table { border-collapse: collapse; }
-        th, td { border: 1px solid #d1d5db; padding: 0.4rem 0.5rem; }
-        th { background-color: #1f497d; color: white; font-weight: 600; font-size: 0.85rem; }
+        th, td { border: 1px solid #d1d5db; padding: 0.4rem 0.5rem; font-size: 0.75rem; }
+        th { background-color: #1f497d; color: white; font-weight: 600; }
         tr:nth-child(even) { background-color: #f8fafc; }
         tr:hover { background-color: #f0f4f8; }
 
-        .kpi-card { background: linear-gradient(135deg, #1f497d 0%, #2d5a9e 100%); color: white; border-radius: 0.5rem; padding: 1.2rem; }
+        .kpi-card { background: linear-gradient(135deg, #1f497d 0%, #2d5a9e 100%); color: white; padding: 1.2rem; border-radius: 0.5rem; }
         .kpi-value { font-size: 1.5rem; font-weight: 700; margin: 0.4rem 0; }
         .kpi-label { font-size: 0.75rem; opacity: 0.9; }
 
-        .accordion-toggle { cursor: pointer; user-select: none; }
-        .accordion-toggle:hover { background-color: #1a3d66; }
+        .accordion-row { cursor: pointer; }
+        .accordion-row:hover { background-color: #dbeafe; }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s; }
+        .accordion-content.open { max-height: 2000px; }
 
-        .arw { display: inline-block; width: 1rem; text-align: center; }
+        .arw { display: inline-block; width: 1rem; }
+
+        .text-red { color: #dc2626; font-weight: 600; }
+        .text-blue { color: #2563eb; font-weight: 600; }
     </style>
 </head>
 <body class="bg-gray-50">
-    <!-- 로그인 페이지 -->
+    <!-- 로그인 -->
     <div id="loginPage" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
-        <div class="w-full max-w-md bg-white rounded-lg shadow-2xl p-8">
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold text-gray-900">📊 판관비 대시보드</h1>
-                <p class="text-gray-600 mt-2">비밀번호로 보호된 대시보드</p>
-            </div>
-
+        <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+            <h1 class="text-3xl font-bold text-gray-900 text-center mb-2">📊 판관비 대시보드</h1>
+            <p class="text-gray-600 text-center mb-6">비밀번호로 보호된 대시보드</p>
             <form id="loginForm" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">비밀번호</label>
-                    <input
-                        type="password"
-                        id="passwordInput"
-                        placeholder="비밀번호를 입력하세요"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                    >
-                </div>
-                <button
-                    type="submit"
-                    class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-semibold transition"
-                >
-                    접속하기
-                </button>
+                <input type="password" id="passwordInput" placeholder="비밀번호를 입력하세요" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-semibold">접속하기</button>
             </form>
-
             <div id="loginError" class="mt-4 p-3 bg-red-50 text-red-600 rounded hidden text-sm"></div>
         </div>
     </div>
@@ -70,80 +54,88 @@
         <header class="bg-gradient-to-r from-blue-900 to-blue-800 text-white py-4 shadow-lg">
             <div class="max-w-full mx-auto px-6">
                 <h1 class="text-3xl font-bold">📊 판관비 분석 대시보드</h1>
-                <p class="text-blue-100 text-sm mt-1">Firebase + Netlify 실시간 대시보드 | <span id="headerInfo">데이터 로드 중...</span></p>
+                <p class="text-blue-100 text-sm mt-1">2024년 1월 ~ 2026년 6월 | <span id="accCount">-</span>개 계정 | <span id="deptCount">-</span>개 상위부서 | 실제 운영 데이터</p>
             </div>
         </header>
 
-        <!-- 탭 네비게이션 -->
+        <!-- 탭 -->
         <div class="bg-white border-b border-gray-300 sticky top-0 z-40">
             <div class="flex space-x-8 px-6 max-w-full">
                 <button onclick="switchTab('tab1')" class="tab-btn active py-3 px-4 font-semibold text-blue-900 border-b-4 border-blue-900 text-sm">
-                    📈 시계열 분석
+                    📈 탭1. 시계열 분석 (거시)
                 </button>
                 <button onclick="switchTab('tab2')" class="tab-btn py-3 px-4 font-semibold text-gray-600 border-b-4 border-transparent hover:text-blue-900 text-sm">
-                    🏢 부서별 분석
+                    🏢 탭2. 부서별 분석 (상위부서)
                 </button>
                 <button onclick="switchTab('tab3')" class="tab-btn py-3 px-4 font-semibold text-gray-600 border-b-4 border-transparent hover:text-blue-900 text-sm">
-                    🤖 AI VIEW
+                    🤖 탭3. AI VIEW (이상치·절감·액션)
                 </button>
             </div>
         </div>
 
-        <!-- ============ Tab 1: 시계열 분석 ============ -->
+        <!-- Tab 1 -->
         <div id="tab1" class="tab-content active p-4">
-            <!-- KPI Cards -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-                <div class="kpi-card">
-                    <div class="kpi-label">2024년 총 판관비</div>
-                    <div class="kpi-value" id="kpi1">-</div>
+                <div class="kpi-card"><div class="kpi-label">2024년 연간 판관비</div><div class="kpi-value" id="kpi1">-</div></div>
+                <div class="kpi-card"><div class="kpi-label">2025년 연간 판관비</div><div class="kpi-value" id="kpi2">-</div><div class="text-xs font-semibold text-yellow-200" id="kpi2yoy">-</div></div>
+                <div class="kpi-card"><div class="kpi-label">2026년 누적(6월)</div><div class="kpi-value" id="kpi3">-</div><div class="text-xs font-semibold text-yellow-200" id="kpi3yoy">-</div></div>
+                <div class="kpi-card"><div class="kpi-label">계정 / 부서 수</div><div class="kpi-value" id="kpi4">-</div></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
+                    <h3 class="font-bold text-red-900 mb-2">🔴 전년 동기 대비 많이 오른 계정 TOP5</h3>
+                    <div id="summary-up" class="text-sm space-y-1"></div>
                 </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">2025년 총 판관비</div>
-                    <div class="kpi-value" id="kpi2">-</div>
-                    <div class="text-xs font-semibold text-yellow-200" id="kpi2yoy">-</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">2026년 누적</div>
-                    <div class="kpi-value" id="kpi3">-</div>
-                    <div class="text-xs font-semibold text-yellow-200" id="kpi3yoy">-</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">계정 / 부서</div>
-                    <div class="kpi-value" id="kpi4">-</div>
+                <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4">
+                    <h3 class="font-bold text-blue-900 mb-2">🔵 전년 동기 대비 많이 내린 계정 TOP5</h3>
+                    <div id="summary-down" class="text-sm space-y-1"></div>
                 </div>
             </div>
 
-            <!-- 시계열 테이블 -->
             <div class="bg-white rounded-lg shadow-md p-4">
                 <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-lg font-bold text-gray-800">📊 계정별 판관비 추이</h2>
-                    <div class="flex items-center gap-2">
-                        <input type="text" id="tab1-search" placeholder="계정명 검색..." class="px-3 py-1 border border-gray-300 rounded text-sm" onkeypress="if(event.key==='Enter') renderTab1()">
-                        <button onclick="renderTab1()" class="px-3 py-1 bg-green-500 text-white rounded text-sm font-semibold hover:bg-green-600">검색</button>
-                    </div>
+                    <h2 class="text-lg font-bold text-gray-800">판관비 시계열 (상위계정 → 상세 계정)</h2>
+                    <input type="text" id="tab1-search" placeholder="계정명 검색..." class="px-3 py-1 border border-gray-300 rounded text-sm" onkeypress="if(event.key==='Enter') renderTab1()">
                 </div>
                 <div class="overflow-x-auto" style="max-height: 650px; overflow-y: auto;">
                     <table class="w-full text-xs">
                         <thead class="sticky top-0">
-                            <tr id="timeSeriesHeader"></tr>
+                            <tr>
+                                <th class="text-left" style="min-width:300px;">계정명</th>
+                                <th class="number-cell">24년도 합계</th>
+                                <th class="number-cell">25년도 합계</th>
+                                <th class="number-cell">24→25%</th>
+                                <th class="number-cell">26년 누적</th>
+                                <th class="number-cell">25→26%</th>
+                            </tr>
                         </thead>
-                        <tbody id="timeSeriesTable">
-                            <tr><td colspan="6" class="text-center text-gray-500 py-4">데이터 로드 중...</td></tr>
-                        </tbody>
+                        <tbody id="tab1Table"></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- ============ Tab 2: 부서별 분석 ============ -->
+        <!-- Tab 2 -->
         <div id="tab2" class="tab-content p-4">
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <h2 class="text-lg font-bold text-gray-800 mb-4">🏢 부서별 비용 분석</h2>
-                <div class="flex items-center gap-2 mb-4">
-                    <select id="deptFilter" class="px-3 py-2 border-2 border-gray-300 rounded font-bold" onchange="renderTab2()">
-                        <option value="">📊 전체 부서</option>
-                    </select>
+            <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mb-4 shadow">
+                <h2 class="text-lg font-bold text-blue-900 mb-3">📊 부서별 비용 현황 Overview</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="bg-white p-3 rounded"><p class="text-xs text-gray-600">전체 비용 추이</p><p class="text-sm font-bold" id="overview-trend">계산 중...</p></div>
+                    <div class="bg-white p-3 rounded"><p class="text-xs text-gray-600">YoY 증감율 (24→25)</p><p class="text-sm font-bold" id="overview-yoy">계산 중...</p></div>
+                    <div class="bg-white p-3 rounded"><p class="text-xs text-gray-600">상위 3부서 집중도</p><p class="text-sm font-bold" id="overview-concentration">계산 중...</p></div>
                 </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-4 mb-4">
+                <label class="font-bold text-sm text-gray-700 block mb-2">부서 선택</label>
+                <select id="deptFilter" class="w-full md:w-96 px-3 py-2 border-2 border-gray-300 rounded font-bold" onchange="renderTab2()">
+                    <option value="">📊 전체 부서 (부서별 분석 테이블)</option>
+                </select>
+            </div>
+
+            <div id="deptRankingView" class="bg-white rounded-lg shadow-md p-4">
+                <h2 class="text-lg font-bold text-gray-800 mb-3">🏢 부서별 비용 분석 (YoY 포함)</h2>
                 <div class="overflow-x-auto" style="max-height: 650px; overflow-y: auto;">
                     <table class="w-full text-xs">
                         <thead class="sticky top-0">
@@ -151,29 +143,30 @@
                                 <th class="text-left">부서명</th>
                                 <th class="number-cell">2024년</th>
                                 <th class="number-cell">2025년</th>
-                                <th class="number-cell">YoY%</th>
-                                <th class="number-cell">2026(누적)</th>
+                                <th class="number-cell">YoY 증감액</th>
+                                <th class="number-cell">YoY 증감율(%)</th>
+                                <th class="number-cell">2026년(상)</th>
+                                <th class="number-cell">25년 대비</th>
+                                <th class="number-cell">계정 수</th>
                             </tr>
                         </thead>
-                        <tbody id="deptTable">
-                            <tr><td colspan="5" class="text-center text-gray-500 py-4">데이터 로드 중...</td></tr>
-                        </tbody>
+                        <tbody id="tab2Table"></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- ============ Tab 3: AI VIEW ============ -->
+        <!-- Tab 3 -->
         <div id="tab3" class="tab-content p-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 shadow">
-                    <h3 class="text-lg font-bold text-red-900 mb-3">🚨 이상치 탐지 (증가 항목)</h3>
+                    <h3 class="text-lg font-bold text-red-900 mb-3">🚨 이상치 탐지 (전년 대비 증감율 상위)</h3>
                     <div id="anomalies-view" class="bg-white p-3 rounded text-sm space-y-2">
                         <p class="text-gray-500">로드 중...</p>
                     </div>
                 </div>
                 <div class="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-4 shadow">
-                    <h3 class="text-lg font-bold text-orange-900 mb-3">💡 비용 절감 기회 (상위 5)</h3>
+                    <h3 class="text-lg font-bold text-orange-900 mb-3">💡 비용 절감 기회 (상위 비용 항목)</h3>
                     <div id="savings-view" class="bg-white p-3 rounded text-sm space-y-2">
                         <p class="text-gray-500">로드 중...</p>
                     </div>
@@ -187,21 +180,16 @@
         const PROJECT_ID = "dash-2132d";
         const API_KEY = "AIzaSyCuvVMvhLE9i8sIEyRc0GR9m18RFQdDHpQ";
 
-        // 전역 데이터
         let allAccounts = [];
         let allDepartments = [];
-        let allData = {};
 
-        // 로그인
         function checkAuth() {
-            const token = localStorage.getItem('pankwanbi_auth');
-            return token === PASSWORD;
+            return localStorage.getItem('pankwanbi_auth') === PASSWORD;
         }
 
         document.getElementById('loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const password = document.getElementById('passwordInput').value;
-            if (password === PASSWORD) {
+            if (document.getElementById('passwordInput').value === PASSWORD) {
                 localStorage.setItem('pankwanbi_auth', PASSWORD);
                 document.getElementById('loginPage').classList.add('hidden');
                 document.getElementById('dashboard').classList.remove('hidden');
@@ -218,7 +206,6 @@
             loadAllData();
         }
 
-        // Firebase REST API로 모든 데이터 로드
         async function loadAllData() {
             try {
                 const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/accounts?key=${API_KEY}`;
@@ -227,200 +214,187 @@
 
                 allAccounts = (data.documents || []).map(doc => {
                     const fields = doc.fields;
+                    const deptData = {};
+                    if (fields.data?.mapValue?.fields) {
+                        Object.entries(fields.data.mapValue.fields).forEach(([dept, values]) => {
+                            if (values.arrayValue?.values) {
+                                deptData[dept] = values.arrayValue.values.map(v => v.integerValue ? parseInt(v.integerValue) : 0);
+                            }
+                        });
+                    }
                     return {
-                        id: doc.name.split('/').pop(),
                         code: fields.code?.stringValue || '',
                         name: fields.name?.stringValue || '',
-                        data: convertFirestoreMap(fields.data?.mapValue?.fields || {})
+                        data: deptData
                     };
                 });
 
-                // 부서 목록 추출
-                allDepartments = Array.from(new Set(
-                    allAccounts.flatMap(acc => Object.keys(acc.data || {}))
-                )).sort();
+                allDepartments = Array.from(new Set(allAccounts.flatMap(a => Object.keys(a.data)))).sort();
 
-                document.getElementById('headerInfo').textContent = `${allAccounts.length}개 계정 | ${allDepartments.length}개 부서`;
+                document.getElementById('accCount').textContent = allAccounts.length;
+                document.getElementById('deptCount').textContent = allDepartments.length;
 
-                // 각 탭 렌더링
                 renderTab1();
                 renderTab2();
                 renderTab3();
 
-                // 탭 필터 옵션
-                const deptFilterSelect = document.getElementById('deptFilter');
-                allDepartments.forEach(dept => {
-                    const option = document.createElement('option');
-                    option.value = dept;
-                    option.textContent = dept;
-                    deptFilterSelect.appendChild(option);
+                const deptFilter = document.getElementById('deptFilter');
+                allDepartments.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d;
+                    opt.textContent = d;
+                    deptFilter.appendChild(opt);
                 });
 
             } catch (error) {
-                console.error('데이터 로드 실패:', error);
+                console.error('로드 실패:', error);
             }
         }
 
-        function convertFirestoreMap(fields) {
-            const obj = {};
-            Object.entries(fields).forEach(([key, value]) => {
-                if (value.arrayValue) {
-                    obj[key] = (value.arrayValue.values || []).map(v => v.integerValue ? parseInt(v.integerValue) : 0);
-                } else if (value.stringValue) {
-                    obj[key] = value.stringValue;
-                }
+        function fmt(num) { return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+        function fmtEok(num) { return (num / 100000000).toFixed(1) + '억'; }
+        function pct(a, b) { return b ? ((a - b) / Math.abs(b) * 100) : 0; }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('border-blue-900', 'text-blue-900');
+                b.classList.add('border-transparent', 'text-gray-600');
             });
-            return obj;
-        }
-
-        function fmt(num) {
-            return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        }
-
-        function fmtEok(num) {
-            return (num / 100000000).toFixed(1) + '억';
-        }
-
-        // Tab 전환
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('border-blue-900', 'text-blue-900');
-                btn.classList.add('border-transparent', 'text-gray-600');
-            });
-            document.getElementById(tabName).classList.add('active');
+            document.getElementById(tab).classList.add('active');
             event.target.classList.add('border-blue-900', 'text-blue-900');
             event.target.classList.remove('border-transparent', 'text-gray-600');
         }
 
-        // Tab 1: 시계열 분석
         function renderTab1() {
-            const search = (document.getElementById('tab1-search').value || '').trim().toLowerCase();
+            const search = (document.getElementById('tab1-search').value || '').toLowerCase();
             let filtered = allAccounts;
             if (search) {
                 filtered = allAccounts.filter(a => a.code.toLowerCase().includes(search) || a.name.toLowerCase().includes(search));
             }
 
-            // KPI 계산
-            const totals = { 2024: 0, 2025: 0, 2026: 0 };
-            allAccounts.forEach(acc => {
-                allDepartments.forEach((dept, idx) => {
-                    const values = acc.data[dept] || [0, 0, 0];
-                    totals[2024] += values[0] || 0;
-                    totals[2025] += values[1] || 0;
-                    totals[2026] += values[2] || 0;
+            let totals = { 2024: 0, 2025: 0, 2026: 0 };
+            allAccounts.forEach(a => {
+                allDepartments.forEach((d, i) => {
+                    const v = a.data[d] || [0, 0, 0];
+                    totals[2024] += v[0]; totals[2025] += v[1]; totals[2026] += v[2];
                 });
             });
 
             document.getElementById('kpi1').textContent = fmtEok(totals[2024]);
             document.getElementById('kpi2').textContent = fmtEok(totals[2025]);
-            const yoy = totals[2024] !== 0 ? ((totals[2025] / totals[2024] - 1) * 100) : 0;
+            let yoy = pct(totals[2025], totals[2024]);
             document.getElementById('kpi2yoy').textContent = `(전년비 ${yoy >= 0 ? '+' : ''}${yoy.toFixed(1)}%)`;
-
             document.getElementById('kpi3').textContent = fmtEok(totals[2026]);
-            const h1yoy = totals[2025] !== 0 ? ((totals[2026] / totals[2025] - 1) * 100) : 0;
+            let h1yoy = pct(totals[2026], totals[2025]);
             document.getElementById('kpi3yoy').textContent = `(25년 대비 ${h1yoy >= 0 ? '+' : ''}${h1yoy.toFixed(1)}%)`;
-
             document.getElementById('kpi4').textContent = `${allAccounts.length} / ${allDepartments.length}`;
 
-            // 테이블 렌더링
-            const headerRow = document.getElementById('timeSeriesHeader');
-            let h = '<th class="text-left" style="min-width:260px;">계정명</th>';
-            h += '<th class="number-cell">2024</th><th class="number-cell">2025</th><th class="number-cell">2026</th>';
-            headerRow.innerHTML = h;
-
-            const tbody = document.getElementById('timeSeriesTable');
-            tbody.innerHTML = filtered.map(acc => {
-                let y24 = 0, y25 = 0, y26 = 0;
-                allDepartments.forEach(dept => {
-                    const values = acc.data[dept] || [0, 0, 0];
-                    y24 += values[0] || 0;
-                    y25 += values[1] || 0;
-                    y26 += values[2] || 0;
-                });
-                return `<tr>
-                    <td class="text-left">${acc.name}</td>
-                    <td class="number-cell">${fmt(y24)}</td>
-                    <td class="number-cell">${fmt(y25)}</td>
-                    <td class="number-cell">${fmt(y26)}</td>
-                </tr>`;
-            }).join('');
-        }
-
-        // Tab 2: 부서별 분석
-        function renderTab2() {
-            const selectedDept = document.getElementById('deptFilter').value;
-            const deptList = selectedDept ? [selectedDept] : allDepartments;
-
-            const tbody = document.getElementById('deptTable');
-            tbody.innerHTML = deptList.map(dept => {
-                let y24 = 0, y25 = 0, y26 = 0;
-                allAccounts.forEach(acc => {
-                    const values = acc.data[dept] || [0, 0, 0];
-                    y24 += values[0] || 0;
-                    y25 += values[1] || 0;
-                    y26 += values[2] || 0;
-                });
-                const yoy = y24 !== 0 ? ((y25 - y24) / y24 * 100) : 0;
-                return `<tr>
-                    <td class="text-left font-semibold">${dept}</td>
-                    <td class="number-cell">${fmt(y24)}</td>
-                    <td class="number-cell">${fmt(y25)}</td>
-                    <td class="number-cell ${yoy >= 0 ? 'text-red-600' : 'text-blue-600'} font-bold">${yoy.toFixed(1)}%</td>
-                    <td class="number-cell">${fmt(y26)}</td>
-                </tr>`;
-            }).join('');
-        }
-
-        // Tab 3: AI VIEW
-        function renderTab3() {
-            // 이상치 탐지
-            const anomalies = [];
-            allAccounts.forEach(acc => {
-                let y25sum = 0, y26sum = 0;
-                allDepartments.forEach(dept => {
-                    const values = acc.data[dept] || [0, 0, 0];
-                    y25sum += values[1] || 0;
-                    y26sum += values[2] || 0;
-                });
-                const delta = y26sum - y25sum;
-                const pct = y25sum !== 0 ? (delta / y25sum * 100) : 0;
-                if (delta > 20000000 && pct > 25) {
-                    anomalies.push({ name: acc.name, delta, pct });
-                }
+            // TOP 5 박스
+            const summaryData = allAccounts.map(a => {
+                let y25 = 0, y26 = 0;
+                allDepartments.forEach(d => { const v = a.data[d] || [0, 0, 0]; y25 += v[1]; y26 += v[2]; });
+                return { name: a.name, delta: y26 - y25, pct: pct(y26, y25) };
             });
 
+            let upList = summaryData.filter(x => x.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 5);
+            let downList = summaryData.filter(x => x.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 5);
+
+            document.getElementById('summary-up').innerHTML = upList.length > 0
+                ? upList.map(x => `<div class="flex justify-between"><span>${x.name}</span><span class="text-red">${fmt(x.delta)} (${x.pct.toFixed(1)}%)</span></div>`).join('')
+                : '<p class="text-gray-400">해당 없음</p>';
+
+            document.getElementById('summary-down').innerHTML = downList.length > 0
+                ? downList.map(x => `<div class="flex justify-between"><span>${x.name}</span><span class="text-blue">${fmt(x.delta)} (${x.pct.toFixed(1)}%)</span></div>`).join('')
+                : '<p class="text-gray-400">해당 없음</p>';
+
+            // 테이블
+            document.getElementById('tab1Table').innerHTML = filtered.map(a => {
+                let y24 = 0, y25 = 0, y26 = 0;
+                allDepartments.forEach(d => { const v = a.data[d] || [0, 0, 0]; y24 += v[0]; y25 += v[1]; y26 += v[2]; });
+                let p2425 = pct(y25, y24);
+                let p2526 = pct(y26, y25);
+                return `<tr class="hover:bg-blue-50">
+                    <td class="text-left">${a.name}</td>
+                    <td class="number-cell">${fmt(y24)}</td>
+                    <td class="number-cell">${fmt(y25)}</td>
+                    <td class="number-cell ${p2425 >= 0 ? 'text-red' : 'text-blue'}">${p2425 >= 0 ? '+' : ''}${p2425.toFixed(1)}%</td>
+                    <td class="number-cell">${fmt(y26)}</td>
+                    <td class="number-cell ${p2526 >= 0 ? 'text-red' : 'text-blue'}">${p2526 >= 0 ? '+' : ''}${p2526.toFixed(1)}%</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderTab2() {
+            const selected = document.getElementById('deptFilter').value;
+            const deptList = selected ? [selected] : allDepartments;
+
+            let stats = deptList.map(d => {
+                let y24 = 0, y25 = 0, y26 = 0, cnt = 0;
+                allAccounts.forEach(a => {
+                    if (a.data[d]) {
+                        const v = a.data[d];
+                        y24 += v[0]; y25 += v[1]; y26 += v[2];
+                        cnt++;
+                    }
+                });
+                return { name: d, y24, y25, y26, cnt, yoy: pct(y25, y24) };
+            });
+
+            if (!selected) stats.sort((a, b) => b.y24 - a.y24);
+
+            // Overview
+            let tot24 = stats.reduce((s, x) => s + x.y24, 0);
+            let tot25 = stats.reduce((s, x) => s + x.y25, 0);
+            let tot26 = stats.reduce((s, x) => s + x.y26, 0);
+            document.getElementById('overview-trend').textContent = `${fmt(tot24)} → ${fmt(tot25)} → ${fmt(tot26)}`;
+            document.getElementById('overview-yoy').textContent = `${pct(tot25, tot24).toFixed(1)}%`;
+            let top3 = stats.sort((a, b) => b.y24 - a.y24).slice(0, 3);
+            let pct3 = (top3.reduce((s, x) => s + x.y24, 0) / tot24 * 100).toFixed(1);
+            document.getElementById('overview-concentration').textContent = `${top3.map(x => x.name).join(', ')} (${pct3}%)`;
+
+            // 테이블
+            document.getElementById('tab2Table').innerHTML = stats.map(s => {
+                let delta = s.y25 - s.y24;
+                let p2526 = pct(s.y26, s.y25);
+                return `<tr class="hover:bg-blue-50">
+                    <td class="text-left font-semibold">${s.name}</td>
+                    <td class="number-cell">${fmt(s.y24)}</td>
+                    <td class="number-cell">${fmt(s.y25)}</td>
+                    <td class="number-cell">${fmt(delta)}</td>
+                    <td class="number-cell ${s.yoy >= 0 ? 'text-red' : 'text-blue'}">${s.yoy >= 0 ? '+' : ''}${s.yoy.toFixed(1)}%</td>
+                    <td class="number-cell">${fmt(s.y26)}</td>
+                    <td class="number-cell ${p2526 > 0 ? 'text-red' : ''}">${p2526 > 0 ? '↑ +' : ''}${p2526.toFixed(1)}%</td>
+                    <td class="number-cell">${s.cnt}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderTab3() {
+            let anomalies = [];
+            allAccounts.forEach(a => {
+                let y25 = 0, y26 = 0;
+                allDepartments.forEach(d => { const v = a.data[d] || [0, 0, 0]; y25 += v[1]; y26 += v[2]; });
+                if (y26 - y25 > 20000000 && pct(y26, y25) > 25) {
+                    anomalies.push({ name: a.name, delta: y26 - y25, pct: pct(y26, y25) });
+                }
+            });
             anomalies.sort((a, b) => b.delta - a.delta);
+
             document.getElementById('anomalies-view').innerHTML = anomalies.length > 0
-                ? anomalies.slice(0, 5).map(a => `
-                    <div class="pb-2 border-b last:border-b-0">
-                        <p class="font-semibold text-red-700">${a.name}</p>
-                        <p class="text-xs text-gray-600">+${fmt(a.delta)} (${a.pct.toFixed(1)}↑)</p>
-                    </div>
-                `).join('')
+                ? anomalies.slice(0, 5).map(a => `<div class="pb-2 border-b last:border-b-0"><p class="font-semibold text-red-700">${a.name}</p><p class="text-xs text-gray-600">+${fmt(a.delta)} (${a.pct.toFixed(1)}↑)</p></div>`).join('')
                 : '<p class="text-gray-400 text-sm">이상 지출 항목 없음 ✓</p>';
 
-            // 비용 절감 기회
-            const savings = [];
-            allAccounts.forEach(acc => {
-                let y26sum = 0;
-                allDepartments.forEach(dept => {
-                    const values = acc.data[dept] || [0, 0, 0];
-                    y26sum += values[2] || 0;
-                });
-                if (y26sum > 50000000) {
-                    savings.push({ name: acc.name, amount: y26sum });
-                }
+            let savings = [];
+            allAccounts.forEach(a => {
+                let y26 = 0;
+                allDepartments.forEach(d => { const v = a.data[d] || [0, 0, 0]; y26 += v[2]; });
+                if (y26 > 50000000) savings.push({ name: a.name, amount: y26 });
             });
-
             savings.sort((a, b) => b.amount - a.amount);
+
             document.getElementById('savings-view').innerHTML = savings.length > 0
-                ? savings.slice(0, 5).map(s => `
-                    <div class="pb-2 border-b last:border-b-0">
-                        <p class="font-semibold text-orange-700">${s.name}</p>
-                        <p class="text-xs text-gray-600">${fmtEok(s.amount)}</p>
-                    </div>
-                `).join('')
+                ? savings.slice(0, 5).map(s => `<div class="pb-2 border-b last:border-b-0"><p class="font-semibold text-orange-700">${s.name}</p><p class="text-xs text-gray-600">${fmtEok(s.amount)}</p></div>`).join('')
                 : '<p class="text-gray-400 text-sm">절감 기회 검토 필요</p>';
         }
     </script>
