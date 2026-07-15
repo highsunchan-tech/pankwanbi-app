@@ -54,7 +54,7 @@
     <header class="bg-gradient-to-r from-blue-900 to-blue-800 text-white py-4 shadow-lg">
         <div class="max-w-full mx-auto px-6">
             <h1 class="text-3xl font-bold">📊 판관비 분석 대시보드</h1>
-            <p class="text-blue-100 text-sm mt-1">2024년 1월 ~ 2026년 6월 | 208개 계정 | 17개 상위부서 | 실제 운영 데이터</p>
+            <p class="text-blue-100 text-sm mt-1">2024년 1월 ~ 2026년 5월 | 208개 계정 | 17개 상위부서 | 실제 운영 데이터</p>
         </div>
     </header>
 
@@ -427,7 +427,7 @@
             const yoyText = yoy >= 0 ? `+${yoy.toFixed(1)}%` : `${yoy.toFixed(1)}%`;
             document.getElementById('kpi2yoy').textContent = `(전년비 ${yoyText})`;
 
-            document.getElementById('kpi3label').textContent = '2026년 누적(6월까지)';
+            document.getElementById('kpi3label').textContent = '2026년 누적(5월까지)';
             document.getElementById('kpi3').textContent = fmtEok(total26);
             const h1_yoy = total25 !== 0 ? ((total26 / total25 - 1) * 100) : 0;
             const h1_yoyText = h1_yoy >= 0 ? `+${h1_yoy.toFixed(1)}%` : `${h1_yoy.toFixed(1)}%`;
