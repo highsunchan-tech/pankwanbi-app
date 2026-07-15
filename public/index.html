@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>판관비 분석 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .loading { opacity: 0.6; pointer-events: none; }
+        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root">
+        <div class="min-h-screen bg-gray-50">
+            <!-- 헤더 -->
+            <header class="bg-white shadow">
+                <div class="max-w-7xl mx-auto px-4 py-4">
+                    <h1 class="text-2xl font-bold text-gray-900">📊 판관비 분석 대시보드</h1>
+                    <p class="text-gray-600 text-sm mt-1">Firebase + Netlify 실시간 대시보드</p>
+                </div>
+            </header>
+
+            <!-- 메인 콘텐츠 -->
+            <main class="max-w-7xl mx-auto px-4 py-8">
+                <!-- 통계 카드 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div class="stat-card text-white p-6 rounded-lg shadow">
+                        <p class="text-sm opacity-90">총 계정</p>
+                        <p class="text-3xl font-bold mt-2" id="totalAccounts">-</p>
+                    </div>
+                    <div class="stat-card text-white p-6 rounded-lg shadow">
+                        <p class="text-sm opacity-90">부서</p>
+                        <p class="text-3xl font-bold mt-2" id="totalDepts">-</p>
+                    </div>
+                    <div class="stat-card text-white p-6 rounded-lg shadow">
+                        <p class="text-sm opacity-90">마지막 업데이트</p>
+                        <p class="text-sm font-bold mt-2" id="lastUpdate">-</p>
+                    </div>
+                    <div class="stat-card text-white p-6 rounded-lg shadow">
+                        <p class="text-sm opacity-90">버전</p>
+                        <p class="text-2xl font-bold mt-2" id="version">-</p>
+                    </div>
+                </div>
+
+                <!-- 검색 및 필터 -->
+                <div class="bg-white rounded-lg shadow p-6 mb-8">
+                    <div class="flex gap-4">
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="계정명 검색..."
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                        <button
+                            id="searchBtn"
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                            검색
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 계정 리스트 -->
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left font-semibold">계정코드</th>
+                                    <th class="px-6 py-3 text-left font-semibold">계정명</th>
+                                    <th class="px-6 py-3 text-right font-semibold">부서 수</th>
+                                    <th class="px-6 py-3 text-center font-semibold">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="accountsList" class="divide-y">
+                                <tr class="text-center py-8">
+                                    <td colspan="4" class="py-8 text-gray-500">데이터 로드 중...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 페이지네이션 -->
+                <div class="mt-6 flex justify-center gap-2">
+                    <button id="prevBtn" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">이전</button>
+                    <div id="pageInfo" class="px-4 py-2">페이지 1</div>
+                    <button id="nextBtn" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">다음</button>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyCuvVMvhLE9i8sIEyRc0GR9m18RFQdDHpQ",
+            authDomain: "dash-2132d.firebaseapp.com",
+            projectId: "dash-2132d",
+            storageBucket: "dash-2132d.firebasestorage.app",
+            messagingSenderId: "710544948136",
+            appId: "1:710544948136:web:410569304052cc5137fb9d"
+        };
+
+        // 상태 관리
+        let allAccounts = [];
+        let filteredAccounts = [];
+        let currentPage = 1;
+        const itemsPerPage = 20;
+
+        // API 호출
+        async function fetchAccounts() {
+            try {
+                const response = await fetch('/api/accounts');
+                const data = await response.json();
+                allAccounts = data;
+                filteredAccounts = data;
+                renderAccounts();
+                updateStats();
+            } catch (error) {
+                console.error('Error fetching accounts:', error);
+                document.getElementById('accountsList').innerHTML =
+                    '<tr><td colspan="4" class="py-8 text-center text-red-500">데이터 로드 실패</td></tr>';
+            }
+        }
+
+        async function fetchMetadata() {
+            try {
+                const response = await fetch('/api/metadata');
+                const data = await response.json();
+                document.getElementById('totalAccounts').textContent = data.totalAccounts || '-';
+                document.getElementById('totalDepts').textContent = data.totalDepartments || '-';
+                document.getElementById('version').textContent = data.version || '-';
+                if (data.lastUpdated) {
+                    const date = new Date(data.lastUpdated.seconds * 1000);
+                    document.getElementById('lastUpdate').textContent = date.toLocaleDateString('ko-KR');
+                }
+            } catch (error) {
+                console.error('Error fetching metadata:', error);
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('pageInfo').textContent =
+                `페이지 ${currentPage} (총 ${Math.ceil(filteredAccounts.length / itemsPerPage)}페이지)`;
+        }
+
+        function renderAccounts() {
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageAccounts = filteredAccounts.slice(start, end);
+
+            const tbody = document.getElementById('accountsList');
+            if (pageAccounts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-gray-500">검색 결과 없음</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = pageAccounts.map(acc => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 font-mono text-sm">${acc.code}</td>
+                    <td class="px-6 py-4">${acc.name}</td>
+                    <td class="px-6 py-4 text-right">${Object.keys(acc.data || {}).length}</td>
+                    <td class="px-6 py-4 text-center">
+                        <button class="text-blue-600 hover:text-blue-900 text-sm">상세</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 이벤트 리스너
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            currentPage = 1;
+            filteredAccounts = allAccounts.filter(acc =>
+                acc.code.toLowerCase().includes(query) ||
+                acc.name.toLowerCase().includes(query)
+            );
+            renderAccounts();
+            updateStats();
+        });
+
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderAccounts();
+                updateStats();
+            }
+        });
+
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            if (currentPage < Math.ceil(filteredAccounts.length / itemsPerPage)) {
+                currentPage++;
+                renderAccounts();
+                updateStats();
+            }
+        });
+
+        // 초기화
+        fetchMetadata();
+        fetchAccounts();
+    </script>
+</body>
+</html>
