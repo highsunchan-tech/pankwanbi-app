@@ -69,7 +69,7 @@
                     🏢 탭2. 부서별 분석 (상위부서)
                 </button>
                 <button onclick="switchTab('tab3')" class="tab-btn py-3 px-4 font-semibold text-gray-600 border-b-4 border-transparent hover:text-blue-900 text-sm">
-                    🤖 탭3. AI VIEW (이상치·절감·액션)
+                    🤖 탭3. AI VIEW (인당 효율성·당월 이상)
                 </button>
             </div>
         </div>
@@ -234,82 +234,84 @@
 
         <!-- ============ Tab 3: AI VIEW (이상치·절감·액션) ============ -->
         <div id="tab3" class="tab-content p-4">
-            <!-- 핵심 수치 -->
+            <!-- KPI 카드 4개 -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
                 <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border-2 border-blue-300">
-                    <p class="text-xs text-gray-600">2024년 판관비</p>
-                    <p class="text-xl font-bold text-blue-900" id="total24">-</p>
+                    <p class="text-xs text-gray-600">2024년 판관비 총액</p>
+                    <p class="text-xl font-bold text-blue-900" id="t3-2024">-</p>
                 </div>
                 <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border-2 border-purple-300">
-                    <p class="text-xs text-gray-600">2025년 판관비</p>
-                    <p class="text-xl font-bold text-purple-900" id="total25">-</p>
+                    <p class="text-xs text-gray-600">2025년 판관비 총액</p>
+                    <p class="text-xl font-bold text-purple-900" id="t3-2025">-</p>
                 </div>
-                <div class="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-lg border-2 border-red-300">
-                    <p class="text-xs text-gray-600">25→26 변동율</p>
-                    <p class="text-xl font-bold text-red-900" id="yoyChange">-</p>
+                <div class="bg-gradient-to-br from-teal-50 to-teal-100 p-4 rounded-lg border-2 border-teal-300">
+                    <p class="text-xs text-gray-600">당기 인당 판관비</p>
+                    <p class="text-xl font-bold text-teal-900" id="t3-percap">-</p>
+                    <p class="text-xs text-gray-500" id="t3-percap-sub">-</p>
                 </div>
                 <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border-2 border-green-300">
-                    <p class="text-xs text-gray-600">절감 기회 (상위 5개)</p>
-                    <p class="text-xl font-bold text-green-900" id="savingsPotential">-</p>
+                    <p class="text-xs text-gray-600">핵심 통제가능 비용 총액</p>
+                    <p class="text-xl font-bold text-green-900" id="t3-ctrl">-</p>
+                    <p class="text-xs text-gray-500" id="t3-ctrl-sub">-</p>
                 </div>
             </div>
 
-            <!-- 이상치 탐지 -->
+            <!-- 표1: 인당 비용 효율성 저하 Top5 -->
             <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-4 shadow">
-                <h3 class="text-lg font-bold text-red-900 mb-3">🚨 이상치 탐지 (전년 대비 증감율 상위)</h3>
-                <div id="anomalies-view" class="bg-white p-4 rounded border-2 border-red-200 text-sm space-y-2">
-                    <p class="text-gray-500">분석 중...</p>
+                <h3 class="text-lg font-bold text-red-900 mb-1">📈 인당 비용 효율성 저하 Top 5</h3>
+                <p class="text-xs text-gray-600 mb-3">기준: 26년 1~5월 vs 25년 1~5월 <strong>인당 비용 증가율</strong> | 통제가능 계정 | 필터: 당기 판관비의 1%↑ &amp; 전년比 절대증가 1천만원↑ | 인원 증가보다 비용 증가가 가파른 항목</p>
+                <div class="overflow-x-auto bg-white rounded border-2 border-red-200">
+                    <table class="w-full text-xs">
+                        <thead class="sticky top-0">
+                            <tr>
+                                <th class="text-left">계정명</th>
+                                <th class="number-cell">25년 1~5월 인당</th>
+                                <th class="number-cell">26년 1~5월 인당</th>
+                                <th class="number-cell">인당 증가율</th>
+                                <th class="number-cell">당기 총액</th>
+                                <th class="number-cell">전년比 증감액</th>
+                            </tr>
+                        </thead>
+                        <tbody id="t3-eff-body">
+                            <tr><td colspan="6" class="text-center text-gray-500 py-4">분석 중...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- 비용 절감 기회 -->
+            <!-- 표2: 당월 비용 스파이크 -->
             <div class="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-4 mb-4 shadow">
-                <h3 class="text-lg font-bold text-orange-900 mb-3">💡 비용 절감 기회 (상위 비용 항목)</h3>
-                <div id="savings-view" class="bg-white p-4 rounded border-2 border-orange-200 text-sm space-y-2">
-                    <p class="text-gray-500">분석 중...</p>
+                <h3 class="text-lg font-bold text-orange-900 mb-1">🚨 당월(2026년 5월) 비용 스파이크 의심 계정</h3>
+                <p class="text-xs text-gray-600 mb-3">당월 집행액이 <strong>직전 년도 동월(24·25년 5월) 평균의 150% 이상</strong> 급증 | 당월 500만원↑ | 인원과 무관한 당월 이상 징후</p>
+                <div class="overflow-x-auto bg-white rounded border-2 border-orange-200">
+                    <table class="w-full text-xs">
+                        <thead class="sticky top-0">
+                            <tr>
+                                <th class="text-left">계정명</th>
+                                <th class="number-cell">24년 5월</th>
+                                <th class="number-cell">25년 5월</th>
+                                <th class="number-cell">동월 평균</th>
+                                <th class="number-cell">26년 5월(당월)</th>
+                                <th class="number-cell">배수</th>
+                            </tr>
+                        </thead>
+                        <tbody id="t3-spike-body">
+                            <tr><td colspan="6" class="text-center text-gray-500 py-4">분석 중...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- 액션 아이템 -->
-            <div class="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4 shadow">
-                <h3 class="text-lg font-bold text-yellow-900 mb-3">✅ 현실적 액션 아이템</h3>
-                <div class="text-sm text-gray-700 space-y-2 bg-white p-4 rounded border-2 border-yellow-200">
-                    <div class="flex items-start gap-3 pb-2 border-b">
-                        <input type="checkbox" class="mt-1">
-                        <div>
-                            <p class="font-semibold text-red-700">1. 이상 지출 계정 현업 확인</p>
-                            <p class="text-xs text-gray-600 mt-1">→ 전년 대비 50% 이상 증가 항목별로 담당 부서에 원인 공유 및 설명 자료 요청</p>
-                        </div>
-                    </div>
-                    <div class="flex items-start gap-3 pb-2 border-b">
-                        <input type="checkbox" class="mt-1">
-                        <div>
-                            <p class="font-semibold text-orange-700">2. 상위 비용 부서 협의</p>
-                            <p class="text-xs text-gray-600 mt-1">→ 상위 5개 부서(경영지원, 서울본사, 아이레시피 등)와 월별 예산 재검토 미팅 일정 수립</p>
-                        </div>
-                    </div>
-                    <div class="flex items-start gap-3 pb-2 border-b">
-                        <input type="checkbox" class="mt-1">
-                        <div>
-                            <p class="font-semibold text-blue-700">3. 절감 계획 수립</p>
-                            <p class="text-xs text-gray-600 mt-1">→ 상위 10개 계정별 연간 절감 목표 설정 및 부서별 실행 계획 확보 (목표: 500M~)</p>
-                        </div>
-                    </div>
-                    <div class="flex items-start gap-3 pb-2 border-b">
-                        <input type="checkbox" class="mt-1">
-                        <div>
-                            <p class="font-semibold text-purple-700">4. 월별 이상치 리포팅</p>
-                            <p class="text-xs text-gray-600 mt-1">→ 매월 초 전월 대비 증감율 25% 이상 계정 자동 추출 및 CFO 보고</p>
-                        </div>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <input type="checkbox" class="mt-1">
-                        <div>
-                            <p class="font-semibold text-green-700">5. 재무 공유</p>
-                            <p class="text-xs text-gray-600 mt-1">→ 월말 정산 후 이사회/경영진 보고자료 작성 (변동율, 절감 진행률, 주요 리스크)</p>
-                        </div>
-                    </div>
-                    </div>
+            <!-- 변수 테이블: 연평균 임직원 수 -->
+            <div class="bg-slate-100 border border-slate-300 rounded-lg p-4 shadow">
+                <h3 class="text-base font-bold text-slate-800 mb-1">⚙️ 연평균 임직원 수 설정</h3>
+                <p class="text-xs text-gray-500 mb-3">숫자를 수정하면 <strong>인당 판관비·인당 효율성 지표가 즉시 재계산</strong>됩니다. (이 브라우저에 저장)</p>
+                <div class="flex flex-wrap items-end gap-4">
+                    <label class="text-sm">2024년 평균<br><input type="number" id="hc24" class="mt-1 w-28 px-2 py-1 border-2 border-slate-300 rounded text-right" min="1" oninput="applyHeadcount()"></label>
+                    <label class="text-sm">2025년 평균<br><input type="number" id="hc25" class="mt-1 w-28 px-2 py-1 border-2 border-slate-300 rounded text-right" min="1" oninput="applyHeadcount()"></label>
+                    <label class="text-sm">2026년 평균<br><input type="number" id="hc26" class="mt-1 w-28 px-2 py-1 border-2 border-slate-300 rounded text-right" min="1" oninput="applyHeadcount()"></label>
+                    <button onclick="resetHeadcount()" class="px-3 py-1 bg-slate-500 text-white rounded text-sm font-semibold hover:bg-slate-600">기본값 복원</button>
+                    <span class="text-xs text-gray-400">단위: 명</span>
                 </div>
             </div>
         </div>
@@ -397,7 +399,8 @@
                 renderDeptRanking();
                 tab2Loaded = true;
             } else if (tabName === 'tab3' && !tab3Loaded) {
-                renderCfoNotes();
+                initHeadcountInputs();
+                renderTab3();
                 tab3Loaded = true;
             }
         }
@@ -876,111 +879,120 @@
             return !nonControllable.some(nc => accountName.includes(nc));
         }
 
-        // 2. 비용 이상치 탐지 (절제된 필터링)
-        function detectAnomalies() {
-            const MIN_AMOUNT = 50000000;  // 5,000만 원
-            const MIN_DELTA = 20000000;   // 2,000만 원
-            const MIN_PCT = 25;           // 25%
-
-            const anomalies = [];
-            if (!ACCOUNTS_TOP) return anomalies;
-
-            ACCOUNTS_TOP.forEach(a => {
-                const y25Total = a.d.reduce((s, d) => s + (d[1] || 0), 0);
-                const y26Total = a.d.reduce((s, d) => s + (d[2] || 0), 0);
-
-                if (Math.abs(y25Total) < MIN_AMOUNT) return;
-
-                const delta = y26Total - y25Total;
-                const pct = y25Total !== 0 ? (delta / y25Total * 100) : 0;
-
-                // 이상치 조건: 절대 증가 +2,000만 이상 & 증감률 +25% 이상 & 통제 가능
-                if (delta >= MIN_DELTA && pct >= MIN_PCT && isControllable(a.nm)) {
-                    anomalies.push({ name: a.nm, y25: y25Total, y26: y26Total, delta, pct });
-                }
-            });
-
-            anomalies.sort((x, y) => y.delta - x.delta);
-            return anomalies;
+        // 2. 연평균 임직원 수 (변수 테이블) — localStorage 저장
+        const HC_DEFAULT = { 24: 300, 25: 330, 26: 350 };
+        function getHeadcount() {
+            let hc = {};
+            try { hc = JSON.parse(localStorage.getItem('pankwanbi_headcount')) || {}; } catch (e) {}
+            return {
+                24: parseInt(hc[24]) > 0 ? parseInt(hc[24]) : HC_DEFAULT[24],
+                25: parseInt(hc[25]) > 0 ? parseInt(hc[25]) : HC_DEFAULT[25],
+                26: parseInt(hc[26]) > 0 ? parseInt(hc[26]) : HC_DEFAULT[26]
+            };
+        }
+        function initHeadcountInputs() {
+            const hc = getHeadcount();
+            document.getElementById('hc24').value = hc[24];
+            document.getElementById('hc25').value = hc[25];
+            document.getElementById('hc26').value = hc[26];
+        }
+        function applyHeadcount() {
+            const hc = {
+                24: parseInt(document.getElementById('hc24').value) || 0,
+                25: parseInt(document.getElementById('hc25').value) || 0,
+                26: parseInt(document.getElementById('hc26').value) || 0
+            };
+            localStorage.setItem('pankwanbi_headcount', JSON.stringify(hc));
+            renderTab3();
+        }
+        function resetHeadcount() {
+            localStorage.setItem('pankwanbi_headcount', JSON.stringify(HC_DEFAULT));
+            initHeadcountInputs();
+            renderTab3();
         }
 
-        // 3. 통제 가능 상위 비용 & 절감 기회
-        function findSavingsOpportunities() {
-            if (!ACCOUNTS_TOP) return [];
+        // 3. 계정 월별 집계 헬퍼 (ACCOUNTS = 전 계정 월별 실적)
+        //    당기 = 2026년 1~N월 누적, 전년동기 = 2025년 1~N월 누적 (같은 기간)
+        function acc26cum(a) { return sum(a.y26.slice(0, N26)); }
+        function acc25cum(a) { return sum(a.y25.slice(0, N26)); }
 
-            const controllableCosts = [];
-            ACCOUNTS_TOP.forEach(a => {
-                const y25Total = a.d.reduce((s, d) => s + (d[1] || 0), 0);
-                const y26Total = a.d.reduce((s, d) => s + (d[2] || 0), 0);
+        // 4. 탭3 렌더링 (인당 효율성 + 당월 이상 징후)
+        function renderTab3() {
+            if (!ACCOUNTS || !ACCOUNTS.length) return;
+            const hc = getHeadcount();
+            const curIdx = N26 - 1;              // 당월 인덱스 (5월 → 4)
+            const cumLabel = `1~${N26}월`;
 
-                if (isControllable(a.nm) && Math.abs(y26Total) > 50000000) {
-                    const pct = y25Total !== 0 ? ((y26Total - y25Total) / y25Total * 100) : 0;
-                    controllableCosts.push({
-                        name: a.nm,
-                        current: y26Total,
-                        previous: y25Total,
-                        delta: y26Total - y25Total,
-                        pct
-                    });
+            // --- 전체 집계 ---
+            const total24 = ACCOUNTS.reduce((s, a) => s + sum(a.y24), 0);
+            const total25 = ACCOUNTS.reduce((s, a) => s + sum(a.y25), 0);
+            const cur26 = ACCOUNTS.reduce((s, a) => s + acc26cum(a), 0);
+
+            // --- KPI 카드 ---
+            document.getElementById('t3-2024').textContent = fmtEok(total24);
+            document.getElementById('t3-2025').textContent = fmtEok(total25);
+            const perCap = hc[26] > 0 ? cur26 / hc[26] : 0;
+            document.getElementById('t3-percap').textContent = fmt(perCap) + '원';
+            document.getElementById('t3-percap-sub').textContent = `26년 ${cumLabel} 누적 ÷ ${fmt(hc[26])}명`;
+            const ctrlTotal = ACCOUNTS.filter(a => isControllable(a.n)).reduce((s, a) => s + acc26cum(a), 0);
+            document.getElementById('t3-ctrl').textContent = fmtEok(ctrlTotal);
+            document.getElementById('t3-ctrl-sub').textContent = `26년 ${cumLabel} · 통제가능 계정 합산`;
+
+            // ===== 표1: 인당 비용 효율성 저하 Top5 =====
+            const onePct = cur26 * 0.01;         // 당기 판관비의 1%
+            const MIN_DELTA = 10000000;          // 전년比 절대증가 1천만원
+            const effRows = [];
+            ACCOUNTS.forEach(a => {
+                if (!isControllable(a.n)) return;
+                const c26 = acc26cum(a), c25 = acc25cum(a);
+                const delta = c26 - c25;
+                if (c26 < onePct) return;        // 당기 총액 1% 이상만
+                if (delta < MIN_DELTA) return;   // 전년比 절대증가 1천만↑만
+                const pc26 = hc[26] > 0 ? c26 / hc[26] : 0;
+                const pc25 = hc[25] > 0 ? c25 / hc[25] : 0;
+                const incPct = pc25 > 0 ? (pc26 - pc25) / pc25 * 100 : (pc26 > 0 ? Infinity : 0);
+                effRows.push({ name: a.n, pc25, pc26, incPct, c26, delta });
+            });
+            effRows.sort((x, y) => y.incPct - x.incPct);
+            const eff = effRows.slice(0, 5);
+            document.getElementById('t3-eff-body').innerHTML = eff.length ? eff.map(r => `
+                <tr>
+                    <td class="text-left">${r.name}</td>
+                    <td class="number-cell">${fmt(r.pc25)}</td>
+                    <td class="number-cell">${fmt(r.pc26)}</td>
+                    <td class="number-cell text-red-600 font-bold">${r.incPct === Infinity ? '신규' : '+' + r.incPct.toFixed(1) + '%'}</td>
+                    <td class="number-cell">${fmt(r.c26)}</td>
+                    <td class="number-cell text-red-600">+${fmt(r.delta)}</td>
+                </tr>`).join('')
+                : '<tr><td colspan="6" class="text-center text-gray-400 py-4">조건에 해당하는 항목 없음</td></tr>';
+
+            // ===== 표2: 당월 스파이크 (당월 vs 직전년도 동월 24·25 평균의 150%↑) =====
+            const MIN_CUR = 5000000;             // 당월 500만원↑
+            const spikeRows = [];
+            ACCOUNTS.forEach(a => {
+                const cur = a.y26[curIdx] || 0;
+                if (cur < MIN_CUR) return;
+                const m24 = a.y24[curIdx] || 0;
+                const m25 = a.y25[curIdx] || 0;
+                const base = (m24 + m25) / 2;
+                if (base <= 0) {
+                    spikeRows.push({ name: a.n, m24, m25, base, cur, ratio: Infinity });   // 전년 동월 실적 없음 → 신규 급증
+                } else if (cur >= base * 1.5) {
+                    spikeRows.push({ name: a.n, m24, m25, base, cur, ratio: cur / base });
                 }
             });
-
-            controllableCosts.sort((x, y) => Math.abs(y.current) - Math.abs(x.current));
-            return controllableCosts.slice(0, 10);
-        }
-
-        // 4. 렌더링 함수
-        function renderCfoNotes() {
-            const total24 = sumAccountsBy(0);
-            const total25 = sumAccountsBy(1);
-            const total26 = sumAccountsBy(2);
-
-            document.getElementById('total24').textContent = fmtEok(total24);
-            document.getElementById('total25').textContent = fmtEok(total25);
-
-            const yoyChange = total25 !== 0 ? (total26 / total25 - 1) * 100 : 0;
-            const yoyText = yoyChange >= 0 ? `+${yoyChange.toFixed(1)}%` : `${yoyChange.toFixed(1)}%`;
-            const yoyColor = yoyChange >= 0 ? 'text-red-600' : 'text-blue-600';
-            document.getElementById('yoyChange').innerHTML = `<span class="${yoyColor}">${yoyText}</span>`;
-
-            // 절감 기회
-            const savings = findSavingsOpportunities();
-            const savingsTotal = savings.slice(0, 5).reduce((s, x) => s + Math.abs(x.current), 0);
-            document.getElementById('savingsPotential').textContent = fmtEok(savingsTotal);
-
-            // 1. 이상치 탐지
-            const anomalies = detectAnomalies();
-            let anomalyHtml = anomalies.length > 0
-                ? anomalies.map(a => `
-                    <div class="flex justify-between items-start pb-2 border-b last:border-b-0">
-                        <div>
-                            <p class="font-semibold text-red-700">${a.name}</p>
-                            <p class="text-xs text-gray-600">
-                                ${fmt(a.y25)} → ${fmt(a.y26)} |
-                                <span class="text-red-600 font-bold">+${fmt(a.delta)}</span> (${a.pct.toFixed(1)}%)
-                            </p>
-                        </div>
-                    </div>
-                `).join('')
-                : '<p class="text-gray-400 text-sm">이상 지출 항목 없음 ✓</p>';
-            document.getElementById('anomalies-view').innerHTML = anomalyHtml;
-
-            // 2. 절감 기회
-            let savingsHtml = savings.length > 0
-                ? savings.slice(0, 5).map(s => `
-                    <div class="flex justify-between items-start pb-2 border-b last:border-b-0">
-                        <div>
-                            <p class="font-semibold text-orange-700">${s.name}</p>
-                            <p class="text-xs text-gray-600">
-                                현액: ${fmt(Math.abs(s.current))} |
-                                전년: ${fmt(Math.abs(s.previous))} |
-                                변화: <span class="${s.pct >= 0 ? 'text-red-600' : 'text-blue-600'}">${s.pct >= 0 ? '+' : ''}${s.pct.toFixed(1)}%</span>
-                            </p>
-                        </div>
-                    </div>
-                `).join('')
-                : '<p class="text-gray-400 text-sm">절감 기회 검토 필요</p>';
-            document.getElementById('savings-view').innerHTML = savingsHtml;
+            spikeRows.sort((x, y) => (y.ratio === Infinity ? 1e9 : y.ratio) - (x.ratio === Infinity ? 1e9 : x.ratio));
+            const spikes = spikeRows.slice(0, 10);
+            document.getElementById('t3-spike-body').innerHTML = spikes.length ? spikes.map(r => `
+                <tr>
+                    <td class="text-left">${r.name}</td>
+                    <td class="number-cell">${fmt(r.m24)}</td>
+                    <td class="number-cell">${fmt(r.m25)}</td>
+                    <td class="number-cell">${fmt(r.base)}</td>
+                    <td class="number-cell text-orange-700 font-bold">${fmt(r.cur)}</td>
+                    <td class="number-cell text-orange-700 font-bold">${r.ratio === Infinity ? '신규' : '×' + r.ratio.toFixed(1)}</td>
+                </tr>`).join('')
+                : '<tr><td colspan="6" class="text-center text-gray-400 py-4">스파이크 의심 항목 없음 ✓</td></tr>';
         }
 
         // ============ 초기화 ============
