@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CFO 판관비 분석 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap');
+        * { font-family: 'Noto Sans KR', sans-serif; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .accordion-content.active { max-height: 5000px; }
+
+        .number-cell { text-align: right; font-family: 'Courier New', monospace; font-size: 0.85rem; }
+
+        table { border-collapse: collapse; }
+        th, td { border: 1px solid #d1d5db; padding: 0.4rem 0.5rem; }
+        th { background-color: #1f497d; color: white; font-weight: 600; font-size: 0.85rem; }
+        tr:nth-child(even) { background-color: #f8fafc; }
+        tr:hover { background-color: #f0f4f8; }
+
+        .kpi-card { background: linear-gradient(135deg, #1f497d 0%, #2d5a9e 100%); color: white; border-radius: 0.5rem; padding: 1.2rem; }
+        .kpi-value { font-size: 1.5rem; font-weight: 700; margin: 0.4rem 0; }
+        .kpi-label { font-size: 0.75rem; opacity: 0.9; }
+
+        .accordion-toggle { cursor: pointer; user-select: none; }
+        .accordion-toggle:hover { background-color: #1a3d66; }
+
+        .yellow-highlight { background-color: #fef3c7; }
+        .red-highlight { background-color: #fecaca; }
+        .warning-badge { background-color: #fed7aa; color: #92400e; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.7rem; font-weight: 600; display: inline-block; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 로그인 오버레이 -->
+    <div id="loginPage" class="fixed inset-0 flex items-center justify-center bg-gray-900 z-50">
+        <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+            <h1 class="text-3xl font-bold text-gray-900 text-center mb-2">📊 판관비 대시보드</h1>
+            <p class="text-gray-600 text-center mb-6">비밀번호로 보호된 대시보드</p>
+            <form id="loginForm" class="space-y-4">
+                <input type="password" id="passwordInput" placeholder="비밀번호를 입력하세요" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required autofocus>
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-semibold">접속하기</button>
+            </form>
+            <div id="loginError" class="mt-4 p-3 bg-red-50 text-red-600 rounded hidden text-sm"></div>
+        </div>
+    </div>
+
+    <!-- 대시보드 전체 (로그인 전 숨김) -->
+    <div id="dashboardWrap" class="hidden">
+    <header class="bg-gradient-to-r from-blue-900 to-blue-800 text-white py-4 shadow-lg">
+        <div class="max-w-full mx-auto px-6">
+            <h1 class="text-3xl font-bold">📊 판관비 분석 대시보드</h1>
+            <p class="text-blue-100 text-sm mt-1">2024년 1월 ~ 2026년 6월 | 208개 계정 | 17개 상위부서 | 실제 운영 데이터</p>
+        </div>
+    </header>
+
+    <div class="max-w-full">
+        <!-- Tab Navigation -->
+        <div class="bg-white border-b border-gray-300 sticky top-0 z-40">
+            <div class="flex space-x-8 px-6">
+                <button onclick="switchTab('tab1')" class="tab-btn active py-3 px-4 font-semibold text-blue-900 border-b-4 border-blue-900 text-sm">
+                    📈 탭1. 시계열 분석 (거시)
+                </button>
+                <button onclick="switchTab('tab2')" class="tab-btn py-3 px-4 font-semibold text-gray-600 border-b-4 border-transparent hover:text-blue-900 text-sm">
+                    🏢 탭2. 부서별 분석 (상위부서)
+                </button>
+                <button onclick="switchTab('tab3')" class="tab-btn py-3 px-4 font-semibold text-gray-600 border-b-4 border-transparent hover:text-blue-900 text-sm">
+                    🤖 탭3. AI VIEW (이상치·절감·액션)
+                </button>
+            </div>
+        </div>
+
+        <!-- ============ Tab 1: 시계열 분석 ============ -->
+        <div id="tab1" class="tab-content active p-4">
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                <div class="kpi-card">
+                    <div class="kpi-label">2024년 연간 판관비</div>
+                    <div class="kpi-value" id="kpi1">-</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">2025년 연간 판관비</div>
+                    <div class="kpi-value" id="kpi2">-</div>
+                    <div class="text-xs font-semibold text-yellow-200" id="kpi2yoy">-</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label" id="kpi3label">2026년 누적</div>
+                    <div class="kpi-value" id="kpi3">-</div>
+                    <div class="text-xs font-semibold text-yellow-200" id="kpi3yoy">-</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">계정 / 부서 수</div>
+                    <div class="kpi-value" id="kpi4">-</div>
+                </div>
+            </div>
+
+            <!-- 요약 박스: 전년 동기 대비 증감액 TOP5 (증감액 큰 순, 금액+% 병기) -->
+            <!-- 월 데이터가 늘어나도 자동으로 "N월 기준"으로 갱신됨 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
+                    <h3 class="font-bold text-red-900 mb-2">🔴 전년 동기 대비 많이 오른 계정 TOP5 <span id="ttl-up-cum" class="text-xs text-gray-500 font-normal">(N월 기준)</span></h3>
+                    <div id="summary-up" class="text-sm space-y-1"></div>
+                </div>
+                <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4">
+                    <h3 class="font-bold text-blue-900 mb-2">🔵 전년 동기 대비 많이 내린 계정 TOP5 <span id="ttl-down-cum" class="text-xs text-gray-500 font-normal">(N월 기준)</span></h3>
+                    <div id="summary-down" class="text-sm space-y-1"></div>
+                </div>
+            </div>
+
+            <!-- Time Series Table -->
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-lg font-bold text-gray-800">판관비 시계열 (상위계정 → 상세 계정)</h2>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="tab1-search" placeholder="계정명 검색..." class="px-3 py-1 border border-gray-300 rounded text-sm" onkeypress="if(event.key==='Enter') renderTimeSeriesTable()">
+                        <button onclick="renderTimeSeriesTable()" class="px-3 py-1 bg-green-500 text-white rounded text-sm font-semibold hover:bg-green-600" title="검색">검색</button>
+                        <button onclick="expandAllGroups()" class="px-3 py-1 bg-blue-500 text-white rounded text-sm font-semibold hover:bg-blue-600" title="모든 박스 펼치기">펼치기</button>
+                        <button onclick="collapseAllGroups()" class="px-3 py-1 bg-gray-500 text-white rounded text-sm font-semibold hover:bg-gray-600" title="모든 박스 접기">접기</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto" style="max-height: 650px; overflow-y: auto; resize: vertical;">
+                    <table class="w-full text-xs border-collapse">
+                        <thead class="sticky top-0">
+                            <tr id="timeSeriesHeader"></tr>
+                        </thead>
+                        <tbody id="timeSeriesTable">
+                            <tr><td colspan="12" class="text-center text-gray-500 py-4">데이터 로드 중...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-xs text-gray-600 mt-3 p-3 bg-gray-50 rounded">
+                    <p><strong>📌 25상→26상% (동기 YoY):</strong> <span id="note-yoy">26년 누적 vs 25년 동일기간 누적</span> 비교 (월 데이터 추가 시 자동으로 기간 확장)</p>
+                    <p><strong>📌 24→25%:</strong> 2024년 연간 합계 대비 2025년 연간 합계 증감률</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ Tab 2: 부서별 심층 분석 ============ -->
+        <div id="tab2" class="tab-content p-4">
+            <!-- Overview 섹션 -->
+            <div class="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500 rounded-lg p-4 mb-4 shadow">
+                <h2 class="text-lg font-bold text-blue-900 mb-3">📊 부서별 비용 현황 Overview</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="bg-white p-3 rounded">
+                        <p class="text-xs text-gray-600">전체 비용 추이</p>
+                        <p class="text-sm font-bold" id="overview-trend">계산 중...</p>
+                    </div>
+                    <div class="bg-white p-3 rounded">
+                        <p class="text-xs text-gray-600">YoY 증감율 (24→25)</p>
+                        <p class="text-sm font-bold" id="overview-yoy">계산 중...</p>
+                    </div>
+                    <div class="bg-white p-3 rounded">
+                        <p class="text-xs text-gray-600">상위 3부서 집중도</p>
+                        <p class="text-sm font-bold" id="overview-concentration">계산 중...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 필터 섹션 -->
+            <div class="bg-white rounded-lg shadow-md p-4 mb-4">
+                <label class="font-bold text-sm text-gray-700 block mb-2">부서 선택 (계정 상세 보기)</label>
+                <select id="deptFilter" class="w-full md:w-96 px-3 py-2 border-2 border-gray-300 rounded font-bold" onchange="renderDeptDetail()">
+                    <option value="">📊 전체 부서 (부서별 분석 테이블)</option>
+                </select>
+            </div>
+
+            <!-- 부서별 상세 분석 테이블 -->
+            <div id="dept-ranking-view">
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">🏢 부서별 비용 분석 (YoY 포함)</h2>
+                    <div class="text-xs text-gray-500 mb-3">
+                        <span>📌 YoY 분석 (24→25) | 26년 상반기 연환산 vs 25년 전체 대비 증감율 | ↑ 증가만 표시</span>
+                    </div>
+                    <div class="overflow-x-auto" style="max-height: 650px; overflow-y: auto;">
+                        <table class="w-full text-xs">
+                            <thead class="sticky top-0">
+                                <tr>
+                                    <th class="text-left">부서명</th>
+                                    <th class="number-cell">2024년</th>
+                                    <th class="number-cell">2025년</th>
+                                    <th class="number-cell">YoY 증감액</th>
+                                    <th class="number-cell">YoY 증감율(%)</th>
+                                    <th class="number-cell">2026년(상)</th>
+                                    <th class="number-cell">25년 대비</th>
+                                    <th class="number-cell">계정 수</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deptRankingTable">
+                                <tr><td colspan="7" class="text-center text-gray-500 py-4">데이터 로드 중...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 급증 부서 분석 -->
+            <div id="spike-analysis-view" class="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-4 mt-4 shadow">
+                <h3 class="font-bold text-orange-900 mb-3">⚠️ YoY 급증 부서 분석 (24년 대비 25년 증가 상위)</h3>
+                <div id="spike-analysis-content" class="bg-white p-3 rounded text-sm space-y-2">
+                    <p class="text-gray-500">분석 중...</p>
+                </div>
+            </div>
+
+            <div id="dept-detail-view" class="hidden">
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-gray-800" id="dept-detail-title">부서 상세 - 계정별 YoY 분석</h2>
+                        <input type="text" id="dept-search" placeholder="계정명 검색..." class="px-3 py-1 border border-gray-300 rounded text-sm w-48" oninput="filterDeptDetailTable()">
+                    </div>
+                    <div class="text-xs text-gray-500 mb-3">📌 26년 상반기 연환산 vs 25년 전체 | 증가만 ↑ 표시</div>
+                    <div class="overflow-x-auto" style="max-height: 650px; overflow-y: auto;">
+                        <table class="w-full text-xs">
+                            <thead class="sticky top-0">
+                                <tr>
+                                    <th class="text-left">계정명</th>
+                                    <th class="number-cell">2024년</th>
+                                    <th class="number-cell">2025년</th>
+                                    <th class="number-cell">YoY 증감액</th>
+                                    <th class="number-cell">YoY 증감율(%)</th>
+                                    <th class="number-cell">2026년(상반)</th>
+                                    <th class="number-cell">25년 대비</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deptDetailTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ Tab 3: AI VIEW (이상치·절감·액션) ============ -->
+        <div id="tab3" class="tab-content p-4">
+            <!-- 핵심 수치 -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border-2 border-blue-300">
+                    <p class="text-xs text-gray-600">2024년 판관비</p>
+                    <p class="text-xl font-bold text-blue-900" id="total24">-</p>
+                </div>
+                <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border-2 border-purple-300">
+                    <p class="text-xs text-gray-600">2025년 판관비</p>
+                    <p class="text-xl font-bold text-purple-900" id="total25">-</p>
+                </div>
+                <div class="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-lg border-2 border-red-300">
+                    <p class="text-xs text-gray-600">25→26 변동율</p>
+                    <p class="text-xl font-bold text-red-900" id="yoyChange">-</p>
+                </div>
+                <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border-2 border-green-300">
+                    <p class="text-xs text-gray-600">절감 기회 (상위 5개)</p>
+                    <p class="text-xl font-bold text-green-900" id="savingsPotential">-</p>
+                </div>
+            </div>
+
+            <!-- 이상치 탐지 -->
+            <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-4 shadow">
+                <h3 class="text-lg font-bold text-red-900 mb-3">🚨 이상치 탐지 (전년 대비 증감율 상위)</h3>
+                <div id="anomalies-view" class="bg-white p-4 rounded border-2 border-red-200 text-sm space-y-2">
+                    <p class="text-gray-500">분석 중...</p>
+                </div>
+            </div>
+
+            <!-- 비용 절감 기회 -->
+            <div class="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-4 mb-4 shadow">
+                <h3 class="text-lg font-bold text-orange-900 mb-3">💡 비용 절감 기회 (상위 비용 항목)</h3>
+                <div id="savings-view" class="bg-white p-4 rounded border-2 border-orange-200 text-sm space-y-2">
+                    <p class="text-gray-500">분석 중...</p>
+                </div>
+            </div>
+
+            <!-- 액션 아이템 -->
+            <div class="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4 shadow">
+                <h3 class="text-lg font-bold text-yellow-900 mb-3">✅ 현실적 액션 아이템</h3>
+                <div class="text-sm text-gray-700 space-y-2 bg-white p-4 rounded border-2 border-yellow-200">
+                    <div class="flex items-start gap-3 pb-2 border-b">
+                        <input type="checkbox" class="mt-1">
+                        <div>
+                            <p class="font-semibold text-red-700">1. 이상 지출 계정 현업 확인</p>
+                            <p class="text-xs text-gray-600 mt-1">→ 전년 대비 50% 이상 증가 항목별로 담당 부서에 원인 공유 및 설명 자료 요청</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 pb-2 border-b">
+                        <input type="checkbox" class="mt-1">
+                        <div>
+                            <p class="font-semibold text-orange-700">2. 상위 비용 부서 협의</p>
+                            <p class="text-xs text-gray-600 mt-1">→ 상위 5개 부서(경영지원, 서울본사, 아이레시피 등)와 월별 예산 재검토 미팅 일정 수립</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 pb-2 border-b">
+                        <input type="checkbox" class="mt-1">
+                        <div>
+                            <p class="font-semibold text-blue-700">3. 절감 계획 수립</p>
+                            <p class="text-xs text-gray-600 mt-1">→ 상위 10개 계정별 연간 절감 목표 설정 및 부서별 실행 계획 확보 (목표: 500M~)</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 pb-2 border-b">
+                        <input type="checkbox" class="mt-1">
+                        <div>
+                            <p class="font-semibold text-purple-700">4. 월별 이상치 리포팅</p>
+                            <p class="text-xs text-gray-600 mt-1">→ 매월 초 전월 대비 증감율 25% 이상 계정 자동 추출 및 CFO 보고</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <input type="checkbox" class="mt-1">
+                        <div>
+                            <p class="font-semibold text-green-700">5. 재무 공유</p>
+                            <p class="text-xs text-gray-600 mt-1">→ 월말 정산 후 이사회/경영진 보고자료 작성 (변동율, 절감 진행률, 주요 리스크)</p>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </div><!-- /dashboardWrap -->
+
+    <script>
+        // ============ 비밀번호 로그인 ============
+        const PASSWORD = "sunjin04!";
+        function showDashboard() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('dashboardWrap').classList.remove('hidden');
+        }
+        if (localStorage.getItem('pankwanbi_auth') === PASSWORD) {
+            showDashboard();
+        }
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (document.getElementById('passwordInput').value === PASSWORD) {
+                localStorage.setItem('pankwanbi_auth', PASSWORD);
+                showDashboard();
+            } else {
+                const err = document.getElementById('loginError');
+                err.textContent = '비밀번호가 잘못되었습니다.';
+                err.classList.remove('hidden');
+            }
+        });
+    </script>
+
+    <script src="dashboard_data.js"></script>
+    <script src="dashboard_data_top_depts.js"></script>
+    <script>
+        // ============ 유틸 함수 ============
+        function sum(arr) { return arr.reduce((a, b) => a + b, 0); }
+        // 포맷팅 캐시 (성능 최적화)
+        const _fmtCache = new Map();
+        function fmt(num) {
+            if (num === undefined || num === null) return '0';
+            const rounded = Math.round(num);
+            if (_fmtCache.has(rounded)) return _fmtCache.get(rounded);
+            const formatted = rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            if (_fmtCache.size < 10000) _fmtCache.set(rounded, formatted);
+            return formatted;
+        }
+        function fmtEok(num) { return (num / 100000000).toFixed(1) + '억'; }
+        function pct(a, b) {
+            if (!b) return 0;
+            return ((a - b) / Math.abs(b) * 100);
+        }
+        function pctClass(p) { return p > 0 ? 'text-red-600 font-bold' : (p < 0 ? 'text-blue-600 font-bold' : 'text-gray-500'); }
+        function pctStr(p) { return (p > 0 ? '+' : '') + p.toFixed(1) + '%'; }
+
+        // 2026년에 데이터가 있는 월 수 (6월까지면 6, 7월 추가되면 7 ... 자동)
+        const N26 = (typeof MONTHS_2026_COUNT !== 'undefined' && MONTHS_2026_COUNT > 0)
+            ? MONTHS_2026_COUNT
+            : (ACCOUNTS[0] ? ACCOUNTS[0].y26.length : 6);
+        // 누적 기간 라벨 (예: "1~6월", "1~7월")
+        const PERIOD_LABEL = `1~${N26}월`;
+
+        // 계정별 파생 합계 미리 계산
+        ACCOUNTS.forEach(a => {
+            a.y24sum = sum(a.y24);              // 2024 연간
+            a.y25sum = sum(a.y25);              // 2025 연간
+            a.y26sum = sum(a.y26.slice(0, N26)); // 2026 누적(1~N월)
+            a.y25h1sum = sum(a.y25.slice(0, N26)); // 2025 동기(1~N월) — YoY 비교 기준
+        });
+
+        // ============ 탭 전환 ============
+        let tab2Loaded = false, tab3Loaded = false;
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-blue-900', 'text-blue-900');
+                btn.classList.add('border-transparent', 'text-gray-600');
+            });
+            document.getElementById(tabName).classList.add('active');
+            event.target.closest('.tab-btn').classList.add('border-blue-900', 'text-blue-900');
+            event.target.closest('.tab-btn').classList.remove('border-transparent', 'text-gray-600');
+
+            // 탭별 lazy loading
+            if (tabName === 'tab2' && !tab2Loaded) {
+                renderDeptFilterOptions();
+                renderDeptRanking();
+                tab2Loaded = true;
+            } else if (tabName === 'tab3' && !tab3Loaded) {
+                renderCfoNotes();
+                tab3Loaded = true;
+            }
+        }
+
+        // ============ KPI ============
+        function sumAccountsBy(yearIdx) {
+            let total = 0;
+            if (!ACCOUNTS_TOP) return 0;
+            ACCOUNTS_TOP.forEach(a => {
+                if (a.d) {
+                    a.d.forEach(dept => {
+                        if (dept && dept[yearIdx]) total += dept[yearIdx];
+                    });
+                }
+            });
+            return total;
+        }
+
+        function renderKPIs() {
+            const total24 = sumAccountsBy(0);
+            const total25 = sumAccountsBy(1);
+            const total26 = sumAccountsBy(2);
+
+            document.getElementById('kpi1').textContent = fmtEok(total24);
+            document.getElementById('kpi2').textContent = fmtEok(total25);
+            const yoy = total24 !== 0 ? ((total25 / total24 - 1) * 100) : 0;
+            const yoyText = yoy >= 0 ? `+${yoy.toFixed(1)}%` : `${yoy.toFixed(1)}%`;
+            document.getElementById('kpi2yoy').textContent = `(전년비 ${yoyText})`;
+
+            document.getElementById('kpi3label').textContent = '2026년 누적(6월까지)';
+            document.getElementById('kpi3').textContent = fmtEok(total26);
+            const h1_yoy = total25 !== 0 ? ((total26 / total25 - 1) * 100) : 0;
+            const h1_yoyText = h1_yoy >= 0 ? `+${h1_yoy.toFixed(1)}%` : `${h1_yoy.toFixed(1)}%`;
+            document.getElementById('kpi3yoy').textContent = `(25년 상반기 대비 ${h1_yoyText})`;
+
+            document.getElementById('kpi4').textContent = (ACCOUNTS_TOP ? ACCOUNTS_TOP.length : 0) + ' / 17';
+        }
+
+        // ============ 요약 박스 (증감액 큰 순, 금액+% 병기) ============
+        // 증감액 짧게: 5.2억 / 320백만 / 540,000
+        function fmtDelta(v) {
+            const sign = v > 0 ? '+' : (v < 0 ? '-' : '');
+            const a = Math.abs(v);
+            if (a >= 1e8) return sign + (a / 1e8).toFixed(1) + '억';
+            if (a >= 1e6) return sign + Math.round(a / 1e6) + '백만';
+            return sign + fmt(a);
+        }
+        // 증감% 표기: 전년값 0이면 신규/소멸
+        function deltaPctStr(cur, prev) {
+            if (prev === 0) return cur === 0 ? '—' : '신규';
+            if (cur === 0) return '전액소멸';
+            return pctStr(pct(cur, prev));
+        }
+        // 한 패널 채우기: 증감액 큰 순 TOP5, "계정명  +증감액 (+%)"
+        function fillSummaryPanel(id, arr, isUp) {
+            let list = arr.filter(x => isUp ? x.d > 0 : x.d < 0);
+            list.sort((a, b) => isUp ? b.d - a.d : a.d - b.d);
+            list = list.slice(0, 5);
+            const cls = isUp ? 'text-red-600' : 'text-blue-600';
+            const el = document.getElementById(id);
+            if (!list.length) { el.innerHTML = '<p class="text-gray-400">해당 없음</p>'; return; }
+            el.innerHTML = list.map(x =>
+                `<div class="flex justify-between gap-2">
+                    <span class="truncate">${x.name}</span>
+                    <span class="whitespace-nowrap font-bold ${cls}">${fmtDelta(x.d)} <span class="text-gray-500 font-normal">(${deltaPctStr(x.cur, x.prev)})</span></span>
+                </div>`
+            ).join('');
+        }
+
+        function renderSummaryBox() {
+            // 전년 동기 누적 대비: 26년 누적 vs 25년 누적
+            if (!ACCOUNTS_TOP) return;
+
+            const cum = ACCOUNTS_TOP.map(a => {
+                const y25total = a.d.reduce((s, dept) => s + (dept[1] || 0), 0);
+                const y26total = a.d.reduce((s, dept) => s + (dept[2] || 0), 0);
+                return { name: a.nm, cur: y26total, prev: y25total, d: y26total - y25total };
+            });
+
+            fillSummaryPanel('summary-up', cum, true);
+            fillSummaryPanel('summary-down', cum, false);
+
+            const label = '26년 상반기 vs 25년 상반기';
+            document.getElementById('ttl-up-cum').textContent = `(${label})`;
+            document.getElementById('ttl-down-cum').textContent = `(${label})`;
+        }
+
+        // ============ 탭1: 시계열 (상위계정 아코디언) ============
+        // 상위계정 = 계정명에서 "(" 앞부분 (예: 복리후생비(판)-건강보험료 → 복리후생비)
+        let TAB1_GROUPS = [];
+        let _tab1TopOpen = false;
+
+        function buildParentGroups() {
+            if (!ACCOUNTS_TOP) return [];
+
+            const map = {};
+            ACCOUNTS_TOP.forEach(a => {
+                const parent = a.nm.split('(')[0].trim();
+                if (!map[parent]) map[parent] = { name: parent, accounts: [] };
+                const g = map[parent];
+                g.accounts.push(a);
+            });
+
+            const arr = Object.values(map);
+            arr.forEach(g => {
+                g.y24 = 0;
+                g.y25 = 0;
+                g.y26 = 0;
+                g.m26 = [];
+                g.accounts.forEach(a => {
+                    const [y24, y25, y26] = a.d.reduce((acc, dept) => [
+                        acc[0] + dept[0],
+                        acc[1] + dept[1],
+                        acc[2] + dept[2]
+                    ], [0, 0, 0]);
+                    g.y24 += y24;
+                    g.y25 += y25;
+                    g.y26 += y26;
+                });
+                g.size = g.y24 + g.y25 + g.y26;
+                g.accounts.sort((x,y) => {
+                    const sumX = x.d.reduce((s, d) => s + d[0] + d[1] + d[2], 0);
+                    const sumY = y.d.reduce((s, d) => s + d[0] + d[1] + d[2], 0);
+                    return sumY - sumX;
+                });
+            });
+            arr.sort((x,y) => y.size - x.size);
+            return arr;
+        }
+
+        // 한 행의 셀들 생성
+        function rowCells(name, y24, y25, m26, y26, y25h1, indent, txtClass, arrow) {
+            const yoy2425 = pct(y25, y24);
+            const yoyH1 = pct(y26, y25h1);
+            const pad = indent * 18 + 8;
+            const arw = (arrow !== null)
+                ? `<span class="arw inline-block w-4 text-center">${arrow}</span> `
+                : `<span class="inline-block w-4"></span> `;
+            let c = `<td class="text-left ${txtClass}" style="padding-left:${pad}px">${arw}${name}</td>`;
+            c += `<td class="number-cell ${txtClass}">${fmt(y24)}</td>`;
+            c += `<td class="number-cell ${txtClass}">${fmt(y25)}</td>`;
+            c += `<td class="number-cell ${pctClass(yoy2425)}">${pctStr(yoy2425)}</td>`;
+            m26.forEach(v => { c += `<td class="number-cell ${txtClass}">${fmt(v)}</td>`; });
+            c += `<td class="number-cell ${txtClass}">${fmt(y26)}</td>`;
+            c += `<td class="number-cell ${pctClass(yoyH1)}">${pctStr(yoyH1)}</td>`;
+            return c;
+        }
+
+        function renderTimeSeriesTable() {
+            TAB1_GROUPS = buildParentGroups();
+            const search = (document.getElementById('tab1-search').value || '').trim();
+            const searching = search.length > 0;
+
+            // 헤더
+            const headerRow = document.getElementById('timeSeriesHeader');
+            let h = '<th class="text-left" style="min-width:260px;">계정 (▶ 클릭 시 상세)</th>';
+            h += '<th class="number-cell">24년도 합계</th><th class="number-cell">25년도 합계</th><th class="number-cell">24→25%</th>';
+            h += `<th class="number-cell">26년 누적</th><th class="number-cell">25→26%</th>`;
+            headerRow.innerHTML = h;
+
+            // 전체 합계
+            const g24 = sumAccountsBy(0);
+            const g25 = sumAccountsBy(1);
+            const g26 = sumAccountsBy(2);
+            const gm26 = [];
+
+            let groups = TAB1_GROUPS;
+            if (searching) {
+                groups = groups.map(g => {
+                    if (g.name.includes(search)) return g;
+                    const acc = g.accounts.filter(a => a.nm.includes(search) || a.c.includes(search));
+                    if (acc.length) { const ng = Object.assign({}, g); ng.accounts = acc; return ng; }
+                    return null;
+                }).filter(Boolean);
+            }
+
+            let rows = '';
+            // Level 1: 판매비와관리비 (전체)
+            rows += `<tr class="cursor-pointer bg-blue-900 text-white font-bold" onclick="toggleTop()">`
+                  + rowCells('📦 판매비와관리비 (전체 판관비)', g24, g25, gm26, g26, g25, 0, 'text-white', searching ? '▼' : '▶')
+                  + `</tr>`;
+
+            // Level 2 + Level 3
+            groups.forEach((g, gi) => {
+                const open = searching;
+                rows += `<tr class="tab1-group cursor-pointer bg-blue-50 font-semibold ${searching ? '' : 'hidden'}" data-gi="${gi}" onclick="toggleGroup(${gi})">`
+                      + rowCells(`${g.name} <span class="text-gray-400 font-normal">(${g.accounts.length})</span>`, g.y24, g.y25, g.m26, g.y26, g.y25, 1, '', open ? '▼' : '▶')
+                      + `</tr>`;
+                g.accounts.forEach(a => {
+                    const [ay24, ay25, ay26] = a.d.reduce((acc, dept) => [
+                        acc[0] + dept[0],
+                        acc[1] + dept[1],
+                        acc[2] + dept[2]
+                    ], [0, 0, 0]);
+                    rows += `<tr class="tab1-detail ${open ? '' : 'hidden'}" data-gi="${gi}">`
+                          + rowCells(a.nm, ay24, ay25, [], ay26, ay25, 2, 'text-gray-600', null)
+                          + `</tr>`;
+                });
+            });
+
+            document.getElementById('timeSeriesTable').innerHTML = rows;
+            _tab1TopOpen = searching;
+        }
+
+        function toggleTop() {
+            _tab1TopOpen = !_tab1TopOpen;
+            const open = _tab1TopOpen;
+            document.querySelectorAll('#timeSeriesTable .tab1-group').forEach(r => r.classList.toggle('hidden', !open));
+            if (!open) {
+                document.querySelectorAll('#timeSeriesTable .tab1-detail').forEach(r => r.classList.add('hidden'));
+                document.querySelectorAll('#timeSeriesTable .tab1-group .arw').forEach(a => a.textContent = '▶');
+            }
+            const topArw = document.querySelector('#timeSeriesTable tr:first-child .arw');
+            if (topArw) topArw.textContent = open ? '▼' : '▶';
+        }
+
+        function toggleGroup(gi) {
+            const details = document.querySelectorAll(`#timeSeriesTable .tab1-detail[data-gi="${gi}"]`);
+            const groupRow = document.querySelector(`#timeSeriesTable .tab1-group[data-gi="${gi}"]`);
+            const isOpen = details.length && !details[0].classList.contains('hidden');
+            details.forEach(r => r.classList.toggle('hidden', isOpen));
+            const arw = groupRow ? groupRow.querySelector('.arw') : null;
+            if (arw) arw.textContent = isOpen ? '▶' : '▼';
+        }
+
+        function expandAllGroups() {
+            // 모든 그룹 펼치기 (금액 내림차순으로 정렬됨)
+            document.querySelectorAll('#timeSeriesTable .tab1-group').forEach(groupRow => {
+                const gi = groupRow.getAttribute('data-gi');
+                const details = document.querySelectorAll(`#timeSeriesTable .tab1-detail[data-gi="${gi}"]`);
+                details.forEach(r => r.classList.remove('hidden'));
+                const arw = groupRow.querySelector('.arw');
+                if (arw) arw.textContent = '▼';
+            });
+        }
+
+        function collapseAllGroups() {
+            // 모든 그룹 접기
+            document.querySelectorAll('#timeSeriesTable .tab1-group').forEach(groupRow => {
+                const gi = groupRow.getAttribute('data-gi');
+                const details = document.querySelectorAll(`#timeSeriesTable .tab1-detail[data-gi="${gi}"]`);
+                details.forEach(r => r.classList.add('hidden'));
+                const arw = groupRow.querySelector('.arw');
+                if (arw) arw.textContent = '▶';
+            });
+        }
+
+        // ============ 탭2: 부서별 분석 (실측치, 2024.01~2026.06 전체기간) ============
+        // 부서별 합계 = DEPT_TOTALS_TOP에서 직접 조회 (최적화)
+        function computeDeptStats() {
+            if (!ACCOUNTS_TOP || ACCOUNTS_TOP.length === 0) return [];
+
+            const stats = DEPARTMENTS_TOP.map((name, idx) => {
+                let sum24 = 0, sum25 = 0, sum26 = 0, acctCount = 0;
+
+                ACCOUNTS_TOP.forEach(a => {
+                    if (a.d && a.d[idx]) {
+                        const [y24, y25, y26] = a.d[idx];
+                        if (y24 !== 0 || y25 !== 0 || y26 !== 0) {
+                            sum24 += y24;
+                            sum25 += y25;
+                            sum26 += y26;
+                            acctCount += 1;
+                        }
+                    }
+                });
+
+                // YoY 분석
+                const yoyDelta = sum25 - sum24;
+                const yoyPct = sum24 !== 0 ? (yoyDelta / sum24 * 100) : (sum25 !== 0 ? 100 : 0);
+
+                return {
+                    idx,
+                    name,
+                    sum24,
+                    sum25,
+                    sum26,
+                    total: sum24 + sum25 + sum26,
+                    acctCount,
+                    yoyDelta,
+                    yoyPct
+                };
+            });
+
+            return stats;
+        }
+
+        function renderDeptOverview() {
+            const stats = computeDeptStats();
+
+            // 전체 비용
+            const total24 = stats.reduce((s, x) => s + x.sum24, 0);
+            const total25 = stats.reduce((s, x) => s + x.sum25, 0);
+            const total26 = stats.reduce((s, x) => s + x.sum26, 0);
+
+            // YoY 증감율
+            const yoy = total24 !== 0 ? ((total25 - total24) / total24 * 100) : 0;
+
+            // 상위 3부서
+            const top3 = stats.sort((a, b) => b.sum24 - a.sum24).slice(0, 3);
+            const top3pct = (top3.reduce((s, x) => s + x.sum24, 0) / total24 * 100).toFixed(1);
+
+            document.getElementById('overview-trend').innerHTML =
+                `${fmt(total24)} → ${fmt(total25)} → ${fmt(total26)}`;
+            document.getElementById('overview-yoy').innerHTML =
+                `${yoy >= 0 ? '+' : ''}${yoy.toFixed(1)}%`;
+            document.getElementById('overview-concentration').innerHTML =
+                `${top3.map(x => x.name).join(', ')} (${top3pct}%)`;
+        }
+
+        function renderSpikeAnalysis() {
+            const stats = computeDeptStats().filter(s => s.sum24 > 0);
+            stats.sort((a, b) => b.yoyDelta - a.yoyDelta);
+
+            const topSpikes = stats.filter(s => s.yoyPct > 25).slice(0, 5);
+
+            const html = topSpikes.length > 0
+                ? topSpikes.map(s => `
+                    <div class="pb-2 border-b last:border-b-0">
+                        <p class="font-semibold text-orange-700">${s.name}</p>
+                        <p class="text-xs text-gray-600">
+                            24년: ${fmt(s.sum24)} → 25년: ${fmt(s.sum25)}
+                            | +${fmt(s.yoyDelta)} (${s.yoyPct.toFixed(1)}↑)
+                        </p>
+                    </div>
+                `).join('')
+                : '<p class="text-gray-500 text-sm">급격한 증가 부서 없음</p>';
+
+            document.getElementById('spike-analysis-content').innerHTML = html;
+        }
+
+        function renderDeptFilterOptions() {
+            const sel = document.getElementById('deptFilter');
+            let opts = '<option value="">📊 전체 부서 (랭킹 보기)</option>';
+            DEPARTMENTS_TOP.forEach((d, i) => { opts += `<option value="${i}">${d}</option>`; });
+            sel.innerHTML = opts;
+        }
+
+        function renderDeptRanking() {
+            const stats = computeDeptStats().filter(s => s.total !== 0);
+            stats.sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+
+            document.getElementById('deptRankingTable').innerHTML = stats.map(s => {
+                // YoY 표시 (24→25)
+                const yoyStr = s.sum24 === 0
+                    ? '신규'
+                    : s.yoyPct >= 0
+                        ? `<span class="text-red-600 font-bold">+${s.yoyPct.toFixed(1)}%</span>`
+                        : `<span class="text-blue-600">${s.yoyPct.toFixed(1)}%</span>`;
+
+                // 25년 대비 (26년 상반기 vs 25년 연간, 높을 때만 표시)
+                const pct_vs_y25 = s.sum25 !== 0 ? ((s.sum26 - s.sum25) / s.sum25 * 100) : 0;
+                const vs25Str = pct_vs_y25 > 0
+                    ? `<span class="text-red-600 font-bold">↑ +${Math.round(pct_vs_y25)}%</span>`
+                    : '';
+
+                return `<tr class="cursor-pointer hover:bg-blue-50" onclick="selectDept(${s.idx})">
+                    <td class="text-left font-semibold">${s.name}</td>
+                    <td class="number-cell">${fmt(s.sum24)}</td>
+                    <td class="number-cell">${fmt(s.sum25)}</td>
+                    <td class="number-cell">${fmt(s.yoyDelta)}</td>
+                    <td class="number-cell">${yoyStr}</td>
+                    <td class="number-cell">${fmt(s.sum26)}</td>
+                    <td class="number-cell">${vs25Str}</td>
+                    <td class="number-cell">${s.acctCount}</td>
+                </tr>`;
+            }).join('');
+
+            // Overview 렌더링
+            renderDeptOverview();
+            renderSpikeAnalysis();
+        }
+
+        function selectDept(idx) {
+            document.getElementById('deptFilter').value = idx;
+            renderDeptDetail();
+        }
+
+        function renderDeptDetail() {
+            const val = document.getElementById('deptFilter').value;
+            if (val === '') {
+                document.getElementById('dept-ranking-view').classList.remove('hidden');
+                document.getElementById('dept-detail-view').classList.add('hidden');
+                renderDeptRanking();
+                return;
+            }
+
+            const deptIdx = parseInt(val);
+            const deptName = DEPARTMENTS_TOP[deptIdx];
+
+            document.getElementById('dept-ranking-view').classList.add('hidden');
+            document.getElementById('dept-detail-view').classList.remove('hidden');
+            document.getElementById('dept-detail-title').textContent = `🏢 ${deptName} — 계정별 연도별 비용`;
+
+            if (!ACCOUNTS_TOP || ACCOUNTS_TOP.length === 0) {
+                document.getElementById('deptDetailTable').innerHTML = '<tr><td colspan="4" class="text-center text-gray-500 py-4">데이터 없음</td></tr>';
+                return;
+            }
+
+            const rows = ACCOUNTS_TOP
+                .filter(a => a.d && a.d[deptIdx] && a.d[deptIdx].some(v => v !== 0))
+                .map(a => {
+                    const [y24, y25, y26] = a.d[deptIdx];
+
+                    // YoY 분석 (24→25)
+                    const yoyDelta = y25 - y24;
+                    const yoyPct = y24 !== 0 ? (yoyDelta / y24 * 100) : (y25 !== 0 ? 100 : 0);
+
+                    // 25년 대비 (26년 상반기 vs 25년 연간, 높을 때만 표시)
+                    const pct_vs_y25 = y25 !== 0 ? ((y26 - y25) / y25 * 100) : 0;
+
+                    return {
+                        name: a.nm,
+                        y24: y24,
+                        y25: y25,
+                        y26: y26,
+                        yoyDelta: yoyDelta,
+                        yoyPct: yoyPct,
+                        pct_vs_y25: pct_vs_y25
+                    };
+                })
+                .sort((a, b) => Math.abs(b.y26) - Math.abs(a.y26));
+
+            if (rows.length === 0) {
+                document.getElementById('deptDetailTable').innerHTML = '<tr><td colspan="7" class="text-center text-gray-500 py-4">데이터 없음</td></tr>';
+                return;
+            }
+
+            document.getElementById('deptDetailTable').innerHTML = rows.map(r => {
+                const yoyStr = r.y24 === 0
+                    ? '신규'
+                    : r.yoyPct >= 0
+                        ? `<span class="text-red-600 font-bold">+${r.yoyPct.toFixed(1)}%</span>`
+                        : `<span class="text-blue-600">${r.yoyPct.toFixed(1)}%</span>`;
+
+                const vs25Str = r.pct_vs_y25 > 0
+                    ? `<span class="text-red-600 font-bold">↑ +${r.pct_vs_y25.toFixed(1)}%</span>`
+                    : '';
+
+                return `
+                    <tr>
+                        <td class="text-left">${r.name}</td>
+                        <td class="number-cell">${fmt(r.y24)}</td>
+                        <td class="number-cell">${fmt(r.y25)}</td>
+                        <td class="number-cell">${fmt(r.yoyDelta)}</td>
+                        <td class="number-cell">${yoyStr}</td>
+                        <td class="number-cell">${fmt(r.y26)}</td>
+                        <td class="number-cell">${vs25Str}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ============ 계정별 상세 검색 필터 ============
+        function filterDeptDetailTable() {
+            const searchText = document.getElementById('dept-search').value.toLowerCase();
+            const rows = document.querySelectorAll('#deptDetailTable tr');
+
+            rows.forEach(row => {
+                if (row.cells.length === 0) return;
+                const accountName = row.cells[0].textContent.toLowerCase();
+                row.style.display = accountName.includes(searchText) ? '' : 'none';
+            });
+        }
+
+        // ============ 탭3: AI VIEW (이상치·절감·액션) ============
+        // ============ 탭3: CFO 레벨 비용 분석 ============
+
+        // 1. 계정 분류: 통제 가능(Controllable) / 통제 불가능(Non-controllable)
+        function isControllable(accountName) {
+            const nonControllable = [
+                '직원급여', '임원급여', '퇴직급여', '퇴직연금',
+                '복리후생비', '건강보험료', '고용보험료', '산재보험료',
+                '감가상각비', '무형자산상각', '손실충당금'
+            ];
+            return !nonControllable.some(nc => accountName.includes(nc));
+        }
+
+        // 2. 비용 이상치 탐지 (절제된 필터링)
+        function detectAnomalies() {
+            const MIN_AMOUNT = 50000000;  // 5,000만 원
+            const MIN_DELTA = 20000000;   // 2,000만 원
+            const MIN_PCT = 25;           // 25%
+
+            const anomalies = [];
+            if (!ACCOUNTS_TOP) return anomalies;
+
+            ACCOUNTS_TOP.forEach(a => {
+                const y25Total = a.d.reduce((s, d) => s + (d[1] || 0), 0);
+                const y26Total = a.d.reduce((s, d) => s + (d[2] || 0), 0);
+
+                if (Math.abs(y25Total) < MIN_AMOUNT) return;
+
+                const delta = y26Total - y25Total;
+                const pct = y25Total !== 0 ? (delta / y25Total * 100) : 0;
+
+                // 이상치 조건: 절대 증가 +2,000만 이상 & 증감률 +25% 이상 & 통제 가능
+                if (delta >= MIN_DELTA && pct >= MIN_PCT && isControllable(a.nm)) {
+                    anomalies.push({ name: a.nm, y25: y25Total, y26: y26Total, delta, pct });
+                }
+            });
+
+            anomalies.sort((x, y) => y.delta - x.delta);
+            return anomalies;
+        }
+
+        // 3. 통제 가능 상위 비용 & 절감 기회
+        function findSavingsOpportunities() {
+            if (!ACCOUNTS_TOP) return [];
+
+            const controllableCosts = [];
+            ACCOUNTS_TOP.forEach(a => {
+                const y25Total = a.d.reduce((s, d) => s + (d[1] || 0), 0);
+                const y26Total = a.d.reduce((s, d) => s + (d[2] || 0), 0);
+
+                if (isControllable(a.nm) && Math.abs(y26Total) > 50000000) {
+                    const pct = y25Total !== 0 ? ((y26Total - y25Total) / y25Total * 100) : 0;
+                    controllableCosts.push({
+                        name: a.nm,
+                        current: y26Total,
+                        previous: y25Total,
+                        delta: y26Total - y25Total,
+                        pct
+                    });
+                }
+            });
+
+            controllableCosts.sort((x, y) => Math.abs(y.current) - Math.abs(x.current));
+            return controllableCosts.slice(0, 10);
+        }
+
+        // 4. 렌더링 함수
+        function renderCfoNotes() {
+            const total24 = sumAccountsBy(0);
+            const total25 = sumAccountsBy(1);
+            const total26 = sumAccountsBy(2);
+
+            document.getElementById('total24').textContent = fmtEok(total24);
+            document.getElementById('total25').textContent = fmtEok(total25);
+
+            const yoyChange = total25 !== 0 ? (total26 / total25 - 1) * 100 : 0;
+            const yoyText = yoyChange >= 0 ? `+${yoyChange.toFixed(1)}%` : `${yoyChange.toFixed(1)}%`;
+            const yoyColor = yoyChange >= 0 ? 'text-red-600' : 'text-blue-600';
+            document.getElementById('yoyChange').innerHTML = `<span class="${yoyColor}">${yoyText}</span>`;
+
+            // 절감 기회
+            const savings = findSavingsOpportunities();
+            const savingsTotal = savings.slice(0, 5).reduce((s, x) => s + Math.abs(x.current), 0);
+            document.getElementById('savingsPotential').textContent = fmtEok(savingsTotal);
+
+            // 1. 이상치 탐지
+            const anomalies = detectAnomalies();
+            let anomalyHtml = anomalies.length > 0
+                ? anomalies.map(a => `
+                    <div class="flex justify-between items-start pb-2 border-b last:border-b-0">
+                        <div>
+                            <p class="font-semibold text-red-700">${a.name}</p>
+                            <p class="text-xs text-gray-600">
+                                ${fmt(a.y25)} → ${fmt(a.y26)} |
+                                <span class="text-red-600 font-bold">+${fmt(a.delta)}</span> (${a.pct.toFixed(1)}%)
+                            </p>
+                        </div>
+                    </div>
+                `).join('')
+                : '<p class="text-gray-400 text-sm">이상 지출 항목 없음 ✓</p>';
+            document.getElementById('anomalies-view').innerHTML = anomalyHtml;
+
+            // 2. 절감 기회
+            let savingsHtml = savings.length > 0
+                ? savings.slice(0, 5).map(s => `
+                    <div class="flex justify-between items-start pb-2 border-b last:border-b-0">
+                        <div>
+                            <p class="font-semibold text-orange-700">${s.name}</p>
+                            <p class="text-xs text-gray-600">
+                                현액: ${fmt(Math.abs(s.current))} |
+                                전년: ${fmt(Math.abs(s.previous))} |
+                                변화: <span class="${s.pct >= 0 ? 'text-red-600' : 'text-blue-600'}">${s.pct >= 0 ? '+' : ''}${s.pct.toFixed(1)}%</span>
+                            </p>
+                        </div>
+                    </div>
+                `).join('')
+                : '<p class="text-gray-400 text-sm">절감 기회 검토 필요</p>';
+            document.getElementById('savings-view').innerHTML = savingsHtml;
+        }
+
+        // ============ 초기화 ============
+        document.addEventListener('DOMContentLoaded', () => {
+            renderKPIs();
+            renderSummaryBox();
+            renderTimeSeriesTable();
+            // 탭2, 탭3은 각 탭 클릭 시 lazy loading (성능 최적화)
+        });
+    </script>
+</body>
+</html>
