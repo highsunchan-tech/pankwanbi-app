@@ -1,24 +1,55 @@
-// Netlify Function: Firebase API Gateway
-const admin = require('firebase-admin');
+// Netlify Function: Firebase REST API Gateway
+const fetch = require('node-fetch');
 
-// Firebase 초기화
-const serviceAccount = require('./serviceAccountKey.json');
+const PROJECT_ID = 'dash-2132d';
+const API_KEY = process.env.FIREBASE_API_KEY || 'AIzaSyCuvVMvhLE9i8sIEyRc0GR9m18RFQdDHpQ';
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-}
-
-const db = admin.firestore();
-
-// 헬퍼 함수: CORS 헤더
 const headers = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Content-Type': 'application/json'
 };
+
+// Firestore REST API 응답을 정규화하는 함수
+function normalizeDocument(doc) {
+  if (!doc || !doc.fields) return null;
+
+  const result = {
+    id: doc.name.split('/').pop(),
+  };
+
+  Object.entries(doc.fields).forEach(([key, value]) => {
+    if (value.stringValue) result[key] = value.stringValue;
+    else if (value.integerValue) result[key] = parseInt(value.integerValue);
+    else if (value.mapValue) result[key] = normalizeMapValue(value.mapValue);
+    else if (value.arrayValue) result[key] = normalizeArrayValue(value.arrayValue);
+  });
+
+  return result;
+}
+
+function normalizeMapValue(mapValue) {
+  const result = {};
+  if (mapValue.fields) {
+    Object.entries(mapValue.fields).forEach(([key, value]) => {
+      if (value.stringValue) result[key] = value.stringValue;
+      else if (value.integerValue) result[key] = parseInt(value.integerValue);
+      else if (value.arrayValue) result[key] = normalizeArrayValue(value.arrayValue);
+      else if (value.mapValue) result[key] = normalizeMapValue(value.mapValue);
+    });
+  }
+  return result;
+}
+
+function normalizeArrayValue(arrayValue) {
+  return (arrayValue.values || []).map(v => {
+    if (v.stringValue) return v.stringValue;
+    if (v.integerValue) return parseInt(v.integerValue);
+    if (v.mapValue) return normalizeMapValue(v.mapValue);
+    return v;
+  });
+}
 
 // OPTIONS 요청 처리
 exports.handler = async (event) => {
@@ -27,15 +58,16 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { path, method, body } = event;
+    const { path, method } = event;
 
     // 1. 전체 계정 조회
     if (path === '/api/accounts' && method === 'GET') {
-      const snapshot = await db.collection('accounts').limit(100).get();
-      const accounts = [];
-      snapshot.forEach(doc => {
-        accounts.push({ id: doc.id, ...doc.data() });
-      });
+      const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/accounts?key=${API_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      const accounts = (data.documents || []).map(doc => normalizeDocument(doc));
+
       return {
         statusCode: 200,
         headers,
@@ -46,24 +78,29 @@ exports.handler = async (event) => {
     // 2. 특정 계정 조회
     if (path.match(/^\/api\/accounts\//) && method === 'GET') {
       const code = path.split('/')[3];
-      const doc = await db.collection('accounts').doc(code).get();
-      if (!doc.exists) {
+      const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/accounts/${code}?key=${API_KEY}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
         return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
       }
+
+      const doc = await response.json();
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ id: doc.id, ...doc.data() })
+        body: JSON.stringify(normalizeDocument(doc))
       };
     }
 
     // 3. 부서 조회
     if (path === '/api/departments' && method === 'GET') {
-      const snapshot = await db.collection('departments').get();
-      const departments = [];
-      snapshot.forEach(doc => {
-        departments.push({ id: doc.id, ...doc.data() });
-      });
+      const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/departments?key=${API_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      const departments = (data.documents || []).map(doc => normalizeDocument(doc));
+
       return {
         statusCode: 200,
         headers,
@@ -71,36 +108,20 @@ exports.handler = async (event) => {
       };
     }
 
-    // 4. 검색
-    if (path === '/api/search' && method === 'GET') {
-      const query = event.queryStringParameters?.q || '';
-      const snapshot = await db.collection('accounts')
-        .where('name', '>=', query)
-        .where('name', '<=', query + '')
-        .limit(20)
-        .get();
-
-      const results = [];
-      snapshot.forEach(doc => {
-        results.push({ id: doc.id, ...doc.data() });
-      });
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify(results)
-      };
-    }
-
-    // 5. 메타데이터
+    // 4. 메타데이터
     if (path === '/api/metadata' && method === 'GET') {
-      const doc = await db.collection('metadata').doc('system').get();
-      if (!doc.exists) {
+      const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/metadata/system?key=${API_KEY}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
         return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
       }
+
+      const doc = await response.json();
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(doc.data())
+        body: JSON.stringify(normalizeDocument(doc))
       };
     }
 
