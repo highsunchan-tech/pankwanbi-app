@@ -69,7 +69,7 @@
                     🏢 탭2. 부서별 분석 (상위부서)
                 </button>
                 <button onclick="switchTab('tab3')" class="tab-btn py-3 px-4 font-semibold text-gray-600 border-b-4 border-transparent hover:text-blue-900 text-sm">
-                    🤖 탭3. AI VIEW (인당 효율성·당월 이상)
+                    🤖 탭3. AI VIEW (YoY·MoM 이상징후)
                 </button>
             </div>
         </div>
@@ -245,9 +245,9 @@
                     <p class="text-xl font-bold text-purple-900" id="t3-2025">-</p>
                 </div>
                 <div class="bg-gradient-to-br from-teal-50 to-teal-100 p-4 rounded-lg border-2 border-teal-300">
-                    <p class="text-xs text-gray-600">당기 인당 판관비</p>
-                    <p class="text-xl font-bold text-teal-900" id="t3-percap">-</p>
-                    <p class="text-xs text-gray-500" id="t3-percap-sub">-</p>
+                    <p class="text-xs text-gray-600">당기 판관비 (26년 1~5월)</p>
+                    <p class="text-xl font-bold text-teal-900" id="t3-cur">-</p>
+                    <p class="text-xs text-gray-500" id="t3-cur-sub">-</p>
                 </div>
                 <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border-2 border-green-300">
                     <p class="text-xs text-gray-600">핵심 통제가능 비용 총액</p>
@@ -256,62 +256,47 @@
                 </div>
             </div>
 
-            <!-- 표1: 인당 비용 효율성 저하 Top5 -->
+            <!-- 표1: 이상징후 (YoY, 전년 동기 대비) -->
             <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-4 shadow">
-                <h3 class="text-lg font-bold text-red-900 mb-1">📈 인당 비용 효율성 저하 Top 5</h3>
-                <p class="text-xs text-gray-600 mb-3">기준: 26년 1~5월 vs 25년 1~5월 <strong>인당 비용 증가율</strong> | 통제가능 계정 | 필터: 당기 판관비의 1%↑ &amp; 전년比 절대증가 1천만원↑ | 인원 증가보다 비용 증가가 가파른 항목</p>
+                <h3 class="text-lg font-bold text-red-900 mb-1">🚨 이상징후 Top — 전년 동기 대비(YoY) 급증</h3>
+                <p class="text-xs text-gray-600 mb-3">기준: 26년 1~5월 vs <strong>25년 1~5월(동기)</strong> | 통제가능 계정 | 필터: 당기 3천만원↑ &amp; 증가액 1천만원↑ &amp; 증가율 25%↑ | 증가액 순</p>
                 <div class="overflow-x-auto bg-white rounded border-2 border-red-200">
                     <table class="w-full text-xs">
                         <thead class="sticky top-0">
                             <tr>
                                 <th class="text-left">계정명</th>
-                                <th class="number-cell">25년 1~5월 인당</th>
-                                <th class="number-cell">26년 1~5월 인당</th>
-                                <th class="number-cell">인당 증가율</th>
-                                <th class="number-cell">당기 총액</th>
-                                <th class="number-cell">전년比 증감액</th>
+                                <th class="number-cell">25년 1~5월</th>
+                                <th class="number-cell">26년 1~5월</th>
+                                <th class="number-cell">증감액</th>
+                                <th class="number-cell">증감율(YoY)</th>
                             </tr>
                         </thead>
-                        <tbody id="t3-eff-body">
-                            <tr><td colspan="6" class="text-center text-gray-500 py-4">분석 중...</td></tr>
+                        <tbody id="t3-yoy-body">
+                            <tr><td colspan="5" class="text-center text-gray-500 py-4">분석 중...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- 표2: 당월 비용 스파이크 -->
+            <!-- 표2: 당월 스파이크 (MoM, 전월 대비) -->
             <div class="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-4 mb-4 shadow">
-                <h3 class="text-lg font-bold text-orange-900 mb-1">🚨 당월(2026년 5월) 비용 스파이크 의심 계정</h3>
-                <p class="text-xs text-gray-600 mb-3">당월 집행액이 <strong>직전 년도 동월(24·25년 5월) 평균의 150% 이상</strong> 급증 | 당월 500만원↑ | 인원과 무관한 당월 이상 징후</p>
+                <h3 class="text-lg font-bold text-orange-900 mb-1">📈 당월 스파이크 Top — 전월 대비(MoM) 급증</h3>
+                <p class="text-xs text-gray-600 mb-3">기준: 26년 <strong>5월(당월) vs 4월(전월)</strong> | 통제가능 계정 | 필터: 당월 500만원↑ &amp; 증가액 500만원↑ &amp; 증가율 50%↑ | 증가액 순</p>
                 <div class="overflow-x-auto bg-white rounded border-2 border-orange-200">
                     <table class="w-full text-xs">
                         <thead class="sticky top-0">
                             <tr>
                                 <th class="text-left">계정명</th>
-                                <th class="number-cell">24년 5월</th>
-                                <th class="number-cell">25년 5월</th>
-                                <th class="number-cell">동월 평균</th>
+                                <th class="number-cell">26년 4월(전월)</th>
                                 <th class="number-cell">26년 5월(당월)</th>
-                                <th class="number-cell">배수</th>
+                                <th class="number-cell">증감액</th>
+                                <th class="number-cell">증감율(MoM)</th>
                             </tr>
                         </thead>
-                        <tbody id="t3-spike-body">
-                            <tr><td colspan="6" class="text-center text-gray-500 py-4">분석 중...</td></tr>
+                        <tbody id="t3-mom-body">
+                            <tr><td colspan="5" class="text-center text-gray-500 py-4">분석 중...</td></tr>
                         </tbody>
                     </table>
-                </div>
-            </div>
-
-            <!-- 변수 테이블: 연평균 임직원 수 -->
-            <div class="bg-slate-100 border border-slate-300 rounded-lg p-4 shadow">
-                <h3 class="text-base font-bold text-slate-800 mb-1">⚙️ 연평균 임직원 수 설정</h3>
-                <p class="text-xs text-gray-500 mb-3">숫자를 수정하면 <strong>인당 판관비·인당 효율성 지표가 즉시 재계산</strong>됩니다. (이 브라우저에 저장)</p>
-                <div class="flex flex-wrap items-end gap-4">
-                    <label class="text-sm">2024년 평균<br><input type="number" id="hc24" class="mt-1 w-28 px-2 py-1 border-2 border-slate-300 rounded text-right" min="1" oninput="applyHeadcount()"></label>
-                    <label class="text-sm">2025년 평균<br><input type="number" id="hc25" class="mt-1 w-28 px-2 py-1 border-2 border-slate-300 rounded text-right" min="1" oninput="applyHeadcount()"></label>
-                    <label class="text-sm">2026년 평균<br><input type="number" id="hc26" class="mt-1 w-28 px-2 py-1 border-2 border-slate-300 rounded text-right" min="1" oninput="applyHeadcount()"></label>
-                    <button onclick="resetHeadcount()" class="px-3 py-1 bg-slate-500 text-white rounded text-sm font-semibold hover:bg-slate-600">기본값 복원</button>
-                    <span class="text-xs text-gray-400">단위: 명</span>
                 </div>
             </div>
         </div>
@@ -399,7 +384,6 @@
                 renderDeptRanking();
                 tab2Loaded = true;
             } else if (tabName === 'tab3' && !tab3Loaded) {
-                initHeadcountInputs();
                 renderTab3();
                 tab3Loaded = true;
             }
@@ -879,48 +863,16 @@
             return !nonControllable.some(nc => accountName.includes(nc));
         }
 
-        // 2. 연평균 임직원 수 (변수 테이블) — localStorage 저장
-        const HC_DEFAULT = { 24: 300, 25: 330, 26: 350 };
-        function getHeadcount() {
-            let hc = {};
-            try { hc = JSON.parse(localStorage.getItem('pankwanbi_headcount')) || {}; } catch (e) {}
-            return {
-                24: parseInt(hc[24]) > 0 ? parseInt(hc[24]) : HC_DEFAULT[24],
-                25: parseInt(hc[25]) > 0 ? parseInt(hc[25]) : HC_DEFAULT[25],
-                26: parseInt(hc[26]) > 0 ? parseInt(hc[26]) : HC_DEFAULT[26]
-            };
-        }
-        function initHeadcountInputs() {
-            const hc = getHeadcount();
-            document.getElementById('hc24').value = hc[24];
-            document.getElementById('hc25').value = hc[25];
-            document.getElementById('hc26').value = hc[26];
-        }
-        function applyHeadcount() {
-            const hc = {
-                24: parseInt(document.getElementById('hc24').value) || 0,
-                25: parseInt(document.getElementById('hc25').value) || 0,
-                26: parseInt(document.getElementById('hc26').value) || 0
-            };
-            localStorage.setItem('pankwanbi_headcount', JSON.stringify(hc));
-            renderTab3();
-        }
-        function resetHeadcount() {
-            localStorage.setItem('pankwanbi_headcount', JSON.stringify(HC_DEFAULT));
-            initHeadcountInputs();
-            renderTab3();
-        }
-
-        // 3. 계정 월별 집계 헬퍼 (ACCOUNTS = 전 계정 월별 실적)
+        // 2. 계정 월별 집계 헬퍼 (ACCOUNTS = 전 계정 월별 실적)
         //    당기 = 2026년 1~N월 누적, 전년동기 = 2025년 1~N월 누적 (같은 기간)
         function acc26cum(a) { return sum(a.y26.slice(0, N26)); }
         function acc25cum(a) { return sum(a.y25.slice(0, N26)); }
 
-        // 4. 탭3 렌더링 (인당 효율성 + 당월 이상 징후)
+        // 4. 탭3 렌더링 (YoY 이상징후 + MoM 당월 스파이크)
         function renderTab3() {
             if (!ACCOUNTS || !ACCOUNTS.length) return;
-            const hc = getHeadcount();
             const curIdx = N26 - 1;              // 당월 인덱스 (5월 → 4)
+            const prevIdx = N26 - 2;             // 전월 인덱스 (4월 → 3)
             const cumLabel = `1~${N26}월`;
 
             // --- 전체 집계 ---
@@ -931,68 +883,65 @@
             // --- KPI 카드 ---
             document.getElementById('t3-2024').textContent = fmtEok(total24);
             document.getElementById('t3-2025').textContent = fmtEok(total25);
-            const perCap = hc[26] > 0 ? cur26 / hc[26] : 0;
-            document.getElementById('t3-percap').textContent = fmt(perCap) + '원';
-            document.getElementById('t3-percap-sub').textContent = `26년 ${cumLabel} 누적 ÷ ${fmt(hc[26])}명`;
+            document.getElementById('t3-cur').textContent = fmtEok(cur26);
+            document.getElementById('t3-cur-sub').textContent = `26년 ${cumLabel} 누적`;
             const ctrlTotal = ACCOUNTS.filter(a => isControllable(a.n)).reduce((s, a) => s + acc26cum(a), 0);
             document.getElementById('t3-ctrl').textContent = fmtEok(ctrlTotal);
             document.getElementById('t3-ctrl-sub').textContent = `26년 ${cumLabel} · 통제가능 계정 합산`;
 
-            // ===== 표1: 인당 비용 효율성 저하 Top5 =====
-            const onePct = cur26 * 0.01;         // 당기 판관비의 1%
-            const MIN_DELTA = 10000000;          // 전년比 절대증가 1천만원
-            const effRows = [];
+            // 증감율 셀 HTML (신규/증감)
+            const pctCell = (cur, prev) => {
+                if (prev <= 0) return '<span class="text-red-600 font-bold">신규</span>';
+                const p = (cur - prev) / prev * 100;
+                return `<span class="text-red-600 font-bold">+${p.toFixed(1)}%</span>`;
+            };
+
+            // ===== 표1: 이상징후 — 전년 동기 대비(YoY) 급증 =====
+            const yoyRows = [];
             ACCOUNTS.forEach(a => {
                 if (!isControllable(a.n)) return;
                 const c26 = acc26cum(a), c25 = acc25cum(a);
                 const delta = c26 - c25;
-                if (c26 < onePct) return;        // 당기 총액 1% 이상만
-                if (delta < MIN_DELTA) return;   // 전년比 절대증가 1천만↑만
-                const pc26 = hc[26] > 0 ? c26 / hc[26] : 0;
-                const pc25 = hc[25] > 0 ? c25 / hc[25] : 0;
-                const incPct = pc25 > 0 ? (pc26 - pc25) / pc25 * 100 : (pc26 > 0 ? Infinity : 0);
-                effRows.push({ name: a.n, pc25, pc26, incPct, c26, delta });
+                if (c26 < 30000000) return;          // 당기 3천만원↑
+                if (delta < 10000000) return;        // 증가액 1천만원↑
+                const pct = c25 > 0 ? delta / c25 * 100 : Infinity;
+                if (pct !== Infinity && pct < 25) return;   // 증가율 25%↑ (신규는 통과)
+                yoyRows.push({ name: a.n, c25, c26, delta });
             });
-            effRows.sort((x, y) => y.incPct - x.incPct);
-            const eff = effRows.slice(0, 5);
-            document.getElementById('t3-eff-body').innerHTML = eff.length ? eff.map(r => `
+            yoyRows.sort((x, y) => y.delta - x.delta);
+            document.getElementById('t3-yoy-body').innerHTML = yoyRows.length ? yoyRows.slice(0, 8).map(r => `
                 <tr>
                     <td class="text-left">${r.name}</td>
-                    <td class="number-cell">${fmt(r.pc25)}</td>
-                    <td class="number-cell">${fmt(r.pc26)}</td>
-                    <td class="number-cell text-red-600 font-bold">${r.incPct === Infinity ? '신규' : '+' + r.incPct.toFixed(1) + '%'}</td>
+                    <td class="number-cell">${fmt(r.c25)}</td>
                     <td class="number-cell">${fmt(r.c26)}</td>
-                    <td class="number-cell text-red-600">+${fmt(r.delta)}</td>
+                    <td class="number-cell text-red-600 font-bold">+${fmt(r.delta)}</td>
+                    <td class="number-cell">${pctCell(r.c26, r.c25)}</td>
                 </tr>`).join('')
-                : '<tr><td colspan="6" class="text-center text-gray-400 py-4">조건에 해당하는 항목 없음</td></tr>';
+                : '<tr><td colspan="5" class="text-center text-gray-400 py-4">조건에 해당하는 항목 없음</td></tr>';
 
-            // ===== 표2: 당월 스파이크 (당월 vs 직전년도 동월 24·25 평균의 150%↑) =====
-            const MIN_CUR = 5000000;             // 당월 500만원↑
-            const spikeRows = [];
+            // ===== 표2: 당월 스파이크 — 전월 대비(MoM) 급증 =====
+            const momRows = [];
             ACCOUNTS.forEach(a => {
+                if (!isControllable(a.n)) return;
                 const cur = a.y26[curIdx] || 0;
-                if (cur < MIN_CUR) return;
-                const m24 = a.y24[curIdx] || 0;
-                const m25 = a.y25[curIdx] || 0;
-                const base = (m24 + m25) / 2;
-                if (base <= 0) {
-                    spikeRows.push({ name: a.n, m24, m25, base, cur, ratio: Infinity });   // 전년 동월 실적 없음 → 신규 급증
-                } else if (cur >= base * 1.5) {
-                    spikeRows.push({ name: a.n, m24, m25, base, cur, ratio: cur / base });
-                }
+                const prev = prevIdx >= 0 ? (a.y26[prevIdx] || 0) : 0;
+                const delta = cur - prev;
+                if (cur < 5000000) return;           // 당월 500만원↑
+                if (delta < 5000000) return;         // 증가액 500만원↑
+                const pct = prev > 0 ? delta / prev * 100 : Infinity;
+                if (pct !== Infinity && pct < 50) return;   // 증가율 50%↑ (신규는 통과)
+                momRows.push({ name: a.n, prev, cur, delta });
             });
-            spikeRows.sort((x, y) => (y.ratio === Infinity ? 1e9 : y.ratio) - (x.ratio === Infinity ? 1e9 : x.ratio));
-            const spikes = spikeRows.slice(0, 10);
-            document.getElementById('t3-spike-body').innerHTML = spikes.length ? spikes.map(r => `
+            momRows.sort((x, y) => y.delta - x.delta);
+            document.getElementById('t3-mom-body').innerHTML = momRows.length ? momRows.slice(0, 8).map(r => `
                 <tr>
                     <td class="text-left">${r.name}</td>
-                    <td class="number-cell">${fmt(r.m24)}</td>
-                    <td class="number-cell">${fmt(r.m25)}</td>
-                    <td class="number-cell">${fmt(r.base)}</td>
-                    <td class="number-cell text-orange-700 font-bold">${fmt(r.cur)}</td>
-                    <td class="number-cell text-orange-700 font-bold">${r.ratio === Infinity ? '신규' : '×' + r.ratio.toFixed(1)}</td>
+                    <td class="number-cell">${fmt(r.prev)}</td>
+                    <td class="number-cell">${fmt(r.cur)}</td>
+                    <td class="number-cell text-orange-700 font-bold">+${fmt(r.delta)}</td>
+                    <td class="number-cell">${pctCell(r.cur, r.prev)}</td>
                 </tr>`).join('')
-                : '<tr><td colspan="6" class="text-center text-gray-400 py-4">스파이크 의심 항목 없음 ✓</td></tr>';
+                : '<tr><td colspan="5" class="text-center text-gray-400 py-4">스파이크 의심 항목 없음 ✓</td></tr>';
         }
 
         // ============ 초기화 ============
