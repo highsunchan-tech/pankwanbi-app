@@ -258,15 +258,15 @@
 
             <!-- 표1: 이상징후 (YoY, 전년 동기 대비) -->
             <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-4 shadow">
-                <h3 class="text-lg font-bold text-red-900 mb-1">🚨 이상징후 Top — 전년 동기 대비(YoY) 급증</h3>
-                <p class="text-xs text-gray-600 mb-3">기준: 26년 1~5월 vs <strong>25년 1~5월(동기)</strong> | 통제가능 계정 | 필터: 당기 3천만원↑ &amp; 증가액 1천만원↑ &amp; 증가율 25%↑ | 증가액 순</p>
+                <h3 class="text-lg font-bold text-red-900 mb-1">🚨 이상징후 Top 5 — 전년 동기 대비(YoY) 증감률 상위</h3>
+                <p class="text-xs text-gray-600 mb-3">비교 기준: <strong>2025년 1~5월 → 2026년 1~5월</strong> (전년 동기·같은 5개월 누적) | 통제가능 계정 | 필터: 당기 3천만원↑ &amp; 증가액 1천만원↑ &amp; 증가율 25%↑ | <strong>증감률(%) 순 Top 5</strong></p>
                 <div class="overflow-x-auto bg-white rounded border-2 border-red-200">
                     <table class="w-full text-xs">
                         <thead class="sticky top-0">
                             <tr>
                                 <th class="text-left">계정명</th>
-                                <th class="number-cell">25년 1~5월</th>
-                                <th class="number-cell">26년 1~5월</th>
+                                <th class="number-cell">2025년 1~5월<br>(전년 동기)</th>
+                                <th class="number-cell">2026년 1~5월<br>(당기)</th>
                                 <th class="number-cell">증감액</th>
                                 <th class="number-cell">증감율(YoY)</th>
                             </tr>
@@ -541,8 +541,8 @@
             // 헤더
             const headerRow = document.getElementById('timeSeriesHeader');
             let h = '<th class="text-left" style="min-width:260px;">계정 (▶ 클릭 시 상세)</th>';
-            h += '<th class="number-cell">24년도 합계</th><th class="number-cell">25년도 합계</th><th class="number-cell">24→25%</th>';
-            h += `<th class="number-cell">26년 누적</th><th class="number-cell">25→26%</th>`;
+            h += '<th class="number-cell">24년도(합계)</th><th class="number-cell">25년도(합계)</th><th class="number-cell">24년→25년(증감율)</th>';
+            h += `<th class="number-cell">26년 누적(${PERIOD_LABEL})</th><th class="number-cell">25년→26년(전년동기, ${PERIOD_LABEL})</th>`;
             headerRow.innerHTML = h;
 
             // 전체 합계
