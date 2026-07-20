@@ -390,15 +390,14 @@
         }
 
         // ============ KPI ============
+        // yearIdx: 0=24년 연간, 1=25년 연간, 2=26년 누적(1~N월), 3=25년 동기(1~N월)
         function sumAccountsBy(yearIdx) {
             let total = 0;
-            if (!ACCOUNTS_TOP) return 0;
-            ACCOUNTS_TOP.forEach(a => {
-                if (a.d) {
-                    a.d.forEach(dept => {
-                        if (dept && dept[yearIdx]) total += dept[yearIdx];
-                    });
-                }
+            ACCOUNTS.forEach(a => {
+                if (yearIdx === 0) total += a.y24sum;
+                else if (yearIdx === 1) total += a.y25sum;
+                else if (yearIdx === 2) total += a.y26sum;
+                else if (yearIdx === 3) total += a.y25h1sum;
             });
             return total;
         }
@@ -478,14 +477,11 @@
         let _tab1TopOpen = false;
 
         function buildParentGroups() {
-            if (!ACCOUNTS_TOP) return [];
-
             const map = {};
-            ACCOUNTS_TOP.forEach(a => {
-                const parent = a.nm.split('(')[0].trim();
+            ACCOUNTS.forEach(a => {
+                const parent = a.n.split('(')[0].trim();
                 if (!map[parent]) map[parent] = { name: parent, accounts: [] };
-                const g = map[parent];
-                g.accounts.push(a);
+                map[parent].accounts.push(a);
             });
 
             const arr = Object.values(map);
@@ -493,23 +489,18 @@
                 g.y24 = 0;
                 g.y25 = 0;
                 g.y26 = 0;
+                g.y25h1 = 0;
                 g.m26 = [];
                 g.accounts.forEach(a => {
-                    const [y24, y25, y26] = a.d.reduce((acc, dept) => [
-                        acc[0] + dept[0],
-                        acc[1] + dept[1],
-                        acc[2] + dept[2]
-                    ], [0, 0, 0]);
-                    g.y24 += y24;
-                    g.y25 += y25;
-                    g.y26 += y26;
+                    g.y24 += a.y24sum;
+                    g.y25 += a.y25sum;
+                    g.y26 += a.y26sum;
+                    g.y25h1 += a.y25h1sum;
                 });
                 g.size = g.y24 + g.y25 + g.y26;
-                g.accounts.sort((x,y) => {
-                    const sumX = x.d.reduce((s, d) => s + d[0] + d[1] + d[2], 0);
-                    const sumY = y.d.reduce((s, d) => s + d[0] + d[1] + d[2], 0);
-                    return sumY - sumX;
-                });
+                g.accounts.sort((x,y) =>
+                    (y.y24sum + y.y25sum + y.y26sum) - (x.y24sum + x.y25sum + x.y26sum)
+                );
             });
             arr.sort((x,y) => y.size - x.size);
             return arr;
@@ -549,13 +540,14 @@
             const g24 = sumAccountsBy(0);
             const g25 = sumAccountsBy(1);
             const g26 = sumAccountsBy(2);
+            const g25h1 = sumAccountsBy(3);
             const gm26 = [];
 
             let groups = TAB1_GROUPS;
             if (searching) {
                 groups = groups.map(g => {
                     if (g.name.includes(search)) return g;
-                    const acc = g.accounts.filter(a => a.nm.includes(search) || a.c.includes(search));
+                    const acc = g.accounts.filter(a => a.n.includes(search) || a.c.includes(search));
                     if (acc.length) { const ng = Object.assign({}, g); ng.accounts = acc; return ng; }
                     return null;
                 }).filter(Boolean);
@@ -564,23 +556,18 @@
             let rows = '';
             // Level 1: 판매비와관리비 (전체)
             rows += `<tr class="cursor-pointer bg-blue-900 text-white font-bold" onclick="toggleTop()">`
-                  + rowCells('📦 판매비와관리비 (전체 판관비)', g24, g25, gm26, g26, g25, 0, 'text-white', searching ? '▼' : '▶')
+                  + rowCells('📦 판매비와관리비 (전체 판관비)', g24, g25, gm26, g26, g25h1, 0, 'text-white', searching ? '▼' : '▶')
                   + `</tr>`;
 
             // Level 2 + Level 3
             groups.forEach((g, gi) => {
                 const open = searching;
                 rows += `<tr class="tab1-group cursor-pointer bg-blue-50 font-semibold ${searching ? '' : 'hidden'}" data-gi="${gi}" onclick="toggleGroup(${gi})">`
-                      + rowCells(`${g.name} <span class="text-gray-400 font-normal">(${g.accounts.length})</span>`, g.y24, g.y25, g.m26, g.y26, g.y25, 1, '', open ? '▼' : '▶')
+                      + rowCells(`${g.name} <span class="text-gray-400 font-normal">(${g.accounts.length})</span>`, g.y24, g.y25, g.m26, g.y26, g.y25h1, 1, '', open ? '▼' : '▶')
                       + `</tr>`;
                 g.accounts.forEach(a => {
-                    const [ay24, ay25, ay26] = a.d.reduce((acc, dept) => [
-                        acc[0] + dept[0],
-                        acc[1] + dept[1],
-                        acc[2] + dept[2]
-                    ], [0, 0, 0]);
                     rows += `<tr class="tab1-detail ${open ? '' : 'hidden'}" data-gi="${gi}">`
-                          + rowCells(a.nm, ay24, ay25, [], ay26, ay25, 2, 'text-gray-600', null)
+                          + rowCells(a.n, a.y24sum, a.y25sum, [], a.y26sum, a.y25h1sum, 2, 'text-gray-600', null)
                           + `</tr>`;
                 });
             });
