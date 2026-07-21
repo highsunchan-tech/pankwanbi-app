@@ -173,7 +173,7 @@
                 <div class="bg-white rounded-lg shadow-md p-4">
                     <h2 class="text-lg font-bold text-gray-800 mb-3">🏢 부서별 비용 분석 (YoY 포함) <span class="text-sm font-normal text-blue-700">— 기준: 2026년 5월 마감 (1~5월 누적)</span></h2>
                     <div class="text-xs text-gray-500 mb-3">
-                        <span>📌 YoY 분석 (24→25) | 26년 1~5월 누적 vs 25년 전체(연간) 대비 증감율 | ↑ 증가만 표시</span>
+                        <span>📌 YoY 분석 (24→25)</span>
                     </div>
                     <div class="overflow-x-auto" style="max-height: 650px; overflow-y: auto;">
                         <table class="w-full text-xs">
@@ -185,7 +185,6 @@
                                     <th class="number-cell">YoY 증감액</th>
                                     <th class="number-cell">YoY 증감율(%)</th>
                                     <th class="number-cell">2026년(1~5월)</th>
-                                    <th class="number-cell">25년 대비</th>
                                     <th class="number-cell">계정 수</th>
                                 </tr>
                             </thead>
@@ -211,7 +210,7 @@
                         <h2 class="text-lg font-bold text-gray-800" id="dept-detail-title">부서 상세 - 계정별 YoY 분석</h2>
                         <input type="text" id="dept-search" placeholder="계정명 검색..." class="px-3 py-1 border border-gray-300 rounded text-sm w-48" oninput="filterDeptDetailTable()">
                     </div>
-                    <div class="text-xs text-gray-500 mb-3">📌 기준: 2026년 5월 마감 | 26년 1~5월 누적 vs 25년 전체(연간) | 증가만 ↑ 표시</div>
+                    <div class="text-xs text-gray-500 mb-3">📌 기준: 2026년 5월 마감</div>
                     <div class="overflow-x-auto" style="max-height: 650px; overflow-y: auto;">
                         <table class="w-full text-xs">
                             <thead class="sticky top-0">
@@ -222,7 +221,6 @@
                                     <th class="number-cell">YoY 증감액</th>
                                     <th class="number-cell">YoY 증감율(%)</th>
                                     <th class="number-cell">2026년(1~5월)</th>
-                                    <th class="number-cell">25년 대비</th>
                                 </tr>
                             </thead>
                             <tbody id="deptDetailTable"></tbody>
@@ -454,19 +452,17 @@
         }
 
         function renderSummaryBox() {
-            // 전년 동기 누적 대비: 26년 누적 vs 25년 누적
-            if (!ACCOUNTS_TOP) return;
+            // 전년 동기 누적 대비: 26년 누적(1~N월) vs 25년 동기(1~N월) 누적
+            if (!ACCOUNTS) return;
 
-            const cum = ACCOUNTS_TOP.map(a => {
-                const y25total = a.d.reduce((s, dept) => s + (dept[1] || 0), 0);
-                const y26total = a.d.reduce((s, dept) => s + (dept[2] || 0), 0);
-                return { name: a.nm, cur: y26total, prev: y25total, d: y26total - y25total };
+            const cum = ACCOUNTS.map(a => {
+                return { name: a.n, cur: a.y26sum, prev: a.y25h1sum, d: a.y26sum - a.y25h1sum };
             });
 
             fillSummaryPanel('summary-up', cum, true);
             fillSummaryPanel('summary-down', cum, false);
 
-            const label = '26년 1~5월 vs 25년 연간';
+            const label = `26년 ${PERIOD_LABEL} vs 25년 동기(${PERIOD_LABEL})`;
             document.getElementById('ttl-up-cum').textContent = `(${label})`;
             document.getElementById('ttl-down-cum').textContent = `(${label})`;
         }
@@ -722,12 +718,6 @@
                         ? `<span class="text-red-600 font-bold">+${s.yoyPct.toFixed(1)}%</span>`
                         : `<span class="text-blue-600">${s.yoyPct.toFixed(1)}%</span>`;
 
-                // 25년 대비 (26년 상반기 vs 25년 연간, 높을 때만 표시)
-                const pct_vs_y25 = s.sum25 !== 0 ? ((s.sum26 - s.sum25) / s.sum25 * 100) : 0;
-                const vs25Str = pct_vs_y25 > 0
-                    ? `<span class="text-red-600 font-bold">↑ +${Math.round(pct_vs_y25)}%</span>`
-                    : '';
-
                 return `<tr class="cursor-pointer hover:bg-blue-50" onclick="selectDept(${s.idx})">
                     <td class="text-left font-semibold">${s.name}</td>
                     <td class="number-cell">${fmt(s.sum24)}</td>
@@ -735,7 +725,6 @@
                     <td class="number-cell">${fmt(s.yoyDelta)}</td>
                     <td class="number-cell">${yoyStr}</td>
                     <td class="number-cell">${fmt(s.sum26)}</td>
-                    <td class="number-cell">${vs25Str}</td>
                     <td class="number-cell">${s.acctCount}</td>
                 </tr>`;
             }).join('');
@@ -780,23 +769,19 @@
                     const yoyDelta = y25 - y24;
                     const yoyPct = y24 !== 0 ? (yoyDelta / y24 * 100) : (y25 !== 0 ? 100 : 0);
 
-                    // 25년 대비 (26년 상반기 vs 25년 연간, 높을 때만 표시)
-                    const pct_vs_y25 = y25 !== 0 ? ((y26 - y25) / y25 * 100) : 0;
-
                     return {
                         name: a.nm,
                         y24: y24,
                         y25: y25,
                         y26: y26,
                         yoyDelta: yoyDelta,
-                        yoyPct: yoyPct,
-                        pct_vs_y25: pct_vs_y25
+                        yoyPct: yoyPct
                     };
                 })
                 .sort((a, b) => Math.abs(b.y26) - Math.abs(a.y26));
 
             if (rows.length === 0) {
-                document.getElementById('deptDetailTable').innerHTML = '<tr><td colspan="7" class="text-center text-gray-500 py-4">데이터 없음</td></tr>';
+                document.getElementById('deptDetailTable').innerHTML = '<tr><td colspan="6" class="text-center text-gray-500 py-4">데이터 없음</td></tr>';
                 return;
             }
 
@@ -807,10 +792,6 @@
                         ? `<span class="text-red-600 font-bold">+${r.yoyPct.toFixed(1)}%</span>`
                         : `<span class="text-blue-600">${r.yoyPct.toFixed(1)}%</span>`;
 
-                const vs25Str = r.pct_vs_y25 > 0
-                    ? `<span class="text-red-600 font-bold">↑ +${r.pct_vs_y25.toFixed(1)}%</span>`
-                    : '';
-
                 return `
                     <tr>
                         <td class="text-left">${r.name}</td>
@@ -819,7 +800,6 @@
                         <td class="number-cell">${fmt(r.yoyDelta)}</td>
                         <td class="number-cell">${yoyStr}</td>
                         <td class="number-cell">${fmt(r.y26)}</td>
-                        <td class="number-cell">${vs25Str}</td>
                     </tr>
                 `;
             }).join('');
