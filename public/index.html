@@ -100,14 +100,10 @@
 
             <!-- 요약 박스: 전년 동기 대비 증감액 TOP5 (증감액 큰 순, 금액+% 병기) -->
             <!-- 월 데이터가 늘어나도 자동으로 "N월 기준"으로 갱신됨 -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div class="grid grid-cols-1 gap-4 mb-4">
                 <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
                     <h3 class="font-bold text-red-900 mb-2">🔴 전년 동기 대비 많이 오른 계정 TOP5 <span id="ttl-up-cum" class="text-xs text-gray-500 font-normal">(N월 기준)</span></h3>
                     <div id="summary-up" class="text-sm space-y-1"></div>
-                </div>
-                <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4">
-                    <h3 class="font-bold text-blue-900 mb-2">🔵 전년 동기 대비 많이 내린 계정 TOP5 <span id="ttl-down-cum" class="text-xs text-gray-500 font-normal">(N월 기준)</span></h3>
-                    <div id="summary-down" class="text-sm space-y-1"></div>
                 </div>
             </div>
 
@@ -173,7 +169,7 @@
                 <div class="bg-white rounded-lg shadow-md p-4">
                     <h2 class="text-lg font-bold text-gray-800 mb-3">🏢 부서별 비용 분석 (YoY 포함) <span class="text-sm font-normal text-blue-700">— 기준: 2026년 5월 마감 (1~5월 누적)</span></h2>
                     <div class="text-xs text-gray-500 mb-3">
-                        <span>📌 YoY 분석 (24→25)</span>
+                        <span>📌 YoY 분석 (24→25) | 25년→26년(전년동기, 1~5월): 26년 1~5월 누적 vs 25년 동기(1~5월) 비교</span>
                     </div>
                     <div class="overflow-x-auto" style="max-height: 650px; overflow-y: auto;">
                         <table class="w-full text-xs">
@@ -185,11 +181,12 @@
                                     <th class="number-cell">YoY 증감액</th>
                                     <th class="number-cell">YoY 증감율(%)</th>
                                     <th class="number-cell">2026년(1~5월)</th>
+                                    <th class="number-cell">25년→26년(전년동기, 1~5월)</th>
                                     <th class="number-cell">계정 수</th>
                                 </tr>
                             </thead>
                             <tbody id="deptRankingTable">
-                                <tr><td colspan="7" class="text-center text-gray-500 py-4">데이터 로드 중...</td></tr>
+                                <tr><td colspan="8" class="text-center text-gray-500 py-4">데이터 로드 중...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -221,6 +218,7 @@
                                     <th class="number-cell">YoY 증감액</th>
                                     <th class="number-cell">YoY 증감율(%)</th>
                                     <th class="number-cell">2026년(1~5월)</th>
+                                    <th class="number-cell">25년→26년(전년동기, 1~5월)</th>
                                 </tr>
                             </thead>
                             <tbody id="deptDetailTable"></tbody>
@@ -460,11 +458,9 @@
             });
 
             fillSummaryPanel('summary-up', cum, true);
-            fillSummaryPanel('summary-down', cum, false);
 
             const label = `26년 ${PERIOD_LABEL} vs 25년 동기(${PERIOD_LABEL})`;
             document.getElementById('ttl-up-cum').textContent = `(${label})`;
-            document.getElementById('ttl-down-cum').textContent = `(${label})`;
         }
 
         // ============ 탭1: 시계열 (상위계정 아코디언) ============
@@ -621,23 +617,28 @@
             if (!ACCOUNTS_TOP || ACCOUNTS_TOP.length === 0) return [];
 
             const stats = DEPARTMENTS_TOP.map((name, idx) => {
-                let sum24 = 0, sum25 = 0, sum26 = 0, acctCount = 0;
+                let sum24 = 0, sum25 = 0, sum26 = 0, sum25h1 = 0, acctCount = 0;
 
                 ACCOUNTS_TOP.forEach(a => {
                     if (a.d && a.d[idx]) {
-                        const [y24, y25, y26] = a.d[idx];
+                        const [y24, y25, y26, y25h1] = a.d[idx];
                         if (y24 !== 0 || y25 !== 0 || y26 !== 0) {
                             sum24 += y24;
                             sum25 += y25;
                             sum26 += y26;
+                            sum25h1 += (y25h1 || 0);
                             acctCount += 1;
                         }
                     }
                 });
 
-                // YoY 분석
+                // YoY 분석 (24→25)
                 const yoyDelta = sum25 - sum24;
                 const yoyPct = sum24 !== 0 ? (yoyDelta / sum24 * 100) : (sum25 !== 0 ? 100 : 0);
+
+                // 동기 YoY (25년 동기 → 26년, 같은 기간끼리 비교)
+                const h1Delta = sum26 - sum25h1;
+                const h1Pct = sum25h1 !== 0 ? (h1Delta / sum25h1 * 100) : (sum26 !== 0 ? 100 : 0);
 
                 return {
                     idx,
@@ -645,10 +646,13 @@
                     sum24,
                     sum25,
                     sum26,
+                    sum25h1,
                     total: sum24 + sum25 + sum26,
                     acctCount,
                     yoyDelta,
-                    yoyPct
+                    yoyPct,
+                    h1Delta,
+                    h1Pct
                 };
             });
 
@@ -718,6 +722,13 @@
                         ? `<span class="text-red-600 font-bold">+${s.yoyPct.toFixed(1)}%</span>`
                         : `<span class="text-blue-600">${s.yoyPct.toFixed(1)}%</span>`;
 
+                // 동기 YoY (25상반기 → 26상반기)
+                const h1Str = s.sum25h1 === 0
+                    ? (s.sum26 === 0 ? '—' : '신규')
+                    : s.h1Pct >= 0
+                        ? `<span class="text-red-600 font-bold">+${s.h1Pct.toFixed(1)}%</span>`
+                        : `<span class="text-blue-600">${s.h1Pct.toFixed(1)}%</span>`;
+
                 return `<tr class="cursor-pointer hover:bg-blue-50" onclick="selectDept(${s.idx})">
                     <td class="text-left font-semibold">${s.name}</td>
                     <td class="number-cell">${fmt(s.sum24)}</td>
@@ -725,6 +736,7 @@
                     <td class="number-cell">${fmt(s.yoyDelta)}</td>
                     <td class="number-cell">${yoyStr}</td>
                     <td class="number-cell">${fmt(s.sum26)}</td>
+                    <td class="number-cell">${h1Str}</td>
                     <td class="number-cell">${s.acctCount}</td>
                 </tr>`;
             }).join('');
@@ -756,32 +768,39 @@
             document.getElementById('dept-detail-title').textContent = `🏢 ${deptName} — 계정별 연도별 비용`;
 
             if (!ACCOUNTS_TOP || ACCOUNTS_TOP.length === 0) {
-                document.getElementById('deptDetailTable').innerHTML = '<tr><td colspan="4" class="text-center text-gray-500 py-4">데이터 없음</td></tr>';
+                document.getElementById('deptDetailTable').innerHTML = '<tr><td colspan="7" class="text-center text-gray-500 py-4">데이터 없음</td></tr>';
                 return;
             }
 
             const rows = ACCOUNTS_TOP
                 .filter(a => a.d && a.d[deptIdx] && a.d[deptIdx].some(v => v !== 0))
                 .map(a => {
-                    const [y24, y25, y26] = a.d[deptIdx];
+                    const [y24, y25, y26, y25h1] = a.d[deptIdx];
 
                     // YoY 분석 (24→25)
                     const yoyDelta = y25 - y24;
                     const yoyPct = y24 !== 0 ? (yoyDelta / y24 * 100) : (y25 !== 0 ? 100 : 0);
+
+                    // 동기 YoY (25상반기 → 26상반기)
+                    const h1v = y25h1 || 0;
+                    const h1Delta = y26 - h1v;
+                    const h1Pct = h1v !== 0 ? (h1Delta / h1v * 100) : (y26 !== 0 ? 100 : 0);
 
                     return {
                         name: a.nm,
                         y24: y24,
                         y25: y25,
                         y26: y26,
+                        y25h1: h1v,
                         yoyDelta: yoyDelta,
-                        yoyPct: yoyPct
+                        yoyPct: yoyPct,
+                        h1Pct: h1Pct
                     };
                 })
                 .sort((a, b) => Math.abs(b.y26) - Math.abs(a.y26));
 
             if (rows.length === 0) {
-                document.getElementById('deptDetailTable').innerHTML = '<tr><td colspan="6" class="text-center text-gray-500 py-4">데이터 없음</td></tr>';
+                document.getElementById('deptDetailTable').innerHTML = '<tr><td colspan="7" class="text-center text-gray-500 py-4">데이터 없음</td></tr>';
                 return;
             }
 
@@ -792,6 +811,12 @@
                         ? `<span class="text-red-600 font-bold">+${r.yoyPct.toFixed(1)}%</span>`
                         : `<span class="text-blue-600">${r.yoyPct.toFixed(1)}%</span>`;
 
+                const h1Str = r.y25h1 === 0
+                    ? (r.y26 === 0 ? '—' : '신규')
+                    : r.h1Pct >= 0
+                        ? `<span class="text-red-600 font-bold">+${r.h1Pct.toFixed(1)}%</span>`
+                        : `<span class="text-blue-600">${r.h1Pct.toFixed(1)}%</span>`;
+
                 return `
                     <tr>
                         <td class="text-left">${r.name}</td>
@@ -800,6 +825,7 @@
                         <td class="number-cell">${fmt(r.yoyDelta)}</td>
                         <td class="number-cell">${yoyStr}</td>
                         <td class="number-cell">${fmt(r.y26)}</td>
+                        <td class="number-cell">${h1Str}</td>
                     </tr>
                 `;
             }).join('');
