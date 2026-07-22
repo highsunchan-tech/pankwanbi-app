@@ -195,7 +195,7 @@
 
             <!-- 급증 부서 분석 -->
             <div id="spike-analysis-view" class="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-4 mt-4 shadow">
-                <h3 class="font-bold text-orange-900 mb-3">⚠️ YoY 급증 부서 분석 (24년 대비 25년 증가 상위)</h3>
+                <h3 class="font-bold text-orange-900 mb-3" id="spike-analysis-title">⚠️ YoY 급증 부서 분석 (24년 대비 25년 증가 상위)</h3>
                 <div id="spike-analysis-content" class="bg-white p-3 rounded text-sm space-y-2">
                     <p class="text-gray-500">분석 중...</p>
                 </div>
@@ -682,11 +682,30 @@
                 `${top3.map(x => x.name).join(', ')} (${top3pct}%)`;
         }
 
-        function renderSpikeAnalysis() {
-            const stats = computeDeptStats().filter(s => s.sum24 > 0);
-            stats.sort((a, b) => b.yoyDelta - a.yoyDelta);
+        function renderSpikeAnalysis(deptIdx) {
+            const isDept = (deptIdx === undefined || deptIdx === null);
+            let items;
 
-            const topSpikes = stats.filter(s => s.yoyPct > 25).slice(0, 5);
+            if (isDept) {
+                items = computeDeptStats()
+                    .filter(s => s.sum24 > 0)
+                    .map(s => ({ name: s.name, sum24: s.sum24, sum25: s.sum25, yoyDelta: s.yoyDelta, yoyPct: s.yoyPct }));
+                document.getElementById('spike-analysis-title').textContent = '⚠️ YoY 급증 부서 분석 (24년 대비 25년 증가 상위)';
+            } else {
+                const deptName = DEPARTMENTS_TOP[deptIdx];
+                items = (ACCOUNTS_TOP || [])
+                    .filter(a => a.d && a.d[deptIdx] && a.d[deptIdx][0] > 0)
+                    .map(a => {
+                        const [y24, y25] = a.d[deptIdx];
+                        const yoyDelta = y25 - y24;
+                        const yoyPct = y24 !== 0 ? (yoyDelta / y24 * 100) : 0;
+                        return { name: a.nm, sum24: y24, sum25: y25, yoyDelta, yoyPct };
+                    });
+                document.getElementById('spike-analysis-title').textContent = `⚠️ YoY 급증 계정 분석 — ${deptName} (24년 대비 25년 증가 상위)`;
+            }
+
+            items.sort((a, b) => b.yoyDelta - a.yoyDelta);
+            const topSpikes = items.filter(s => s.yoyPct > 25).slice(0, 5);
 
             const html = topSpikes.length > 0
                 ? topSpikes.map(s => `
@@ -698,7 +717,7 @@
                         </p>
                     </div>
                 `).join('')
-                : '<p class="text-gray-500 text-sm">급격한 증가 부서 없음</p>';
+                : `<p class="text-gray-500 text-sm">급격한 증가 ${isDept ? '부서' : '계정'} 없음</p>`;
 
             document.getElementById('spike-analysis-content').innerHTML = html;
         }
@@ -766,6 +785,7 @@
             document.getElementById('dept-ranking-view').classList.add('hidden');
             document.getElementById('dept-detail-view').classList.remove('hidden');
             document.getElementById('dept-detail-title').textContent = `🏢 ${deptName} — 계정별 연도별 비용`;
+            renderSpikeAnalysis(deptIdx);
 
             if (!ACCOUNTS_TOP || ACCOUNTS_TOP.length === 0) {
                 document.getElementById('deptDetailTable').innerHTML = '<tr><td colspan="7" class="text-center text-gray-500 py-4">데이터 없음</td></tr>';
