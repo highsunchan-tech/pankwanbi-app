@@ -173,16 +173,7 @@
                     <div class="overflow-x-auto" style="max-height: 650px; overflow-y: auto;">
                         <table class="w-full text-xs">
                             <thead class="sticky top-0">
-                                <tr>
-                                    <th class="text-left">부서명</th>
-                                    <th class="number-cell">2024년</th>
-                                    <th class="number-cell">2025년</th>
-                                    <th class="number-cell">YoY 증감액</th>
-                                    <th class="number-cell">YoY 증감율(%)</th>
-                                    <th class="number-cell">2026년(1~5월)</th>
-                                    <th class="number-cell">25년→26년(전년동기, 1~5월)</th>
-                                    <th class="number-cell">계정 수</th>
-                                </tr>
+                                <tr id="deptRankingHeader"></tr>
                             </thead>
                             <tbody id="deptRankingTable">
                                 <tr><td colspan="8" class="text-center text-gray-500 py-4">데이터 로드 중...</td></tr>
@@ -210,15 +201,7 @@
                     <div class="overflow-x-auto" style="max-height: 650px; overflow-y: auto;">
                         <table class="w-full text-xs">
                             <thead class="sticky top-0">
-                                <tr>
-                                    <th class="text-left">계정명</th>
-                                    <th class="number-cell">2024년</th>
-                                    <th class="number-cell">2025년</th>
-                                    <th class="number-cell">YoY 증감액</th>
-                                    <th class="number-cell">YoY 증감율(%)</th>
-                                    <th class="number-cell">2026년(1~5월)</th>
-                                    <th class="number-cell">25년→26년(전년동기, 1~5월)</th>
-                                </tr>
+                                <tr id="deptDetailHeader"></tr>
                             </thead>
                             <tbody id="deptDetailTable"></tbody>
                         </table>
@@ -375,6 +358,7 @@
 
             // 탭별 lazy loading
             if (tabName === 'tab2' && !tab2Loaded) {
+                renderDeptTableHeaders();
                 renderDeptFilterOptions();
                 renderDeptRanking();
                 tab2Loaded = true;
@@ -745,6 +729,31 @@
             document.getElementById('spike-analysis-content').innerHTML = html;
         }
 
+        // 탭2 표 헤더 (탭1 시계열 표와 동일한 컬럼 구성: 24년/25년/24→25%/25년누적/26년누적/전년동기대비 증감액,(%))
+        function renderDeptTableHeaders() {
+            const h1 = document.getElementById('deptRankingHeader');
+            if (h1) h1.innerHTML = `
+                <th class="text-left">부서명</th>
+                <th class="number-cell">2024년</th>
+                <th class="number-cell">2025년</th>
+                <th class="number-cell">24년→25년(증감율)</th>
+                <th class="number-cell">25년 누적(${PERIOD_LABEL})</th>
+                <th class="number-cell">2026년(${PERIOD_LABEL})</th>
+                <th class="number-cell">전년 동기간(${PERIOD_LABEL}) 대비 증감액,(%)</th>
+                <th class="number-cell">계정 수</th>
+            `;
+            const h2 = document.getElementById('deptDetailHeader');
+            if (h2) h2.innerHTML = `
+                <th class="text-left">계정명</th>
+                <th class="number-cell">2024년</th>
+                <th class="number-cell">2025년</th>
+                <th class="number-cell">24년→25년(증감율)</th>
+                <th class="number-cell">25년 누적(${PERIOD_LABEL})</th>
+                <th class="number-cell">2026년(${PERIOD_LABEL})</th>
+                <th class="number-cell">전년 동기간(${PERIOD_LABEL}) 대비 증감액,(%)</th>
+            `;
+        }
+
         function renderDeptFilterOptions() {
             const sel = document.getElementById('deptFilter');
             let opts = '<option value="">📊 전체 부서 (랭킹 보기)</option>';
@@ -764,21 +773,21 @@
                         ? `<span class="text-red-600 font-bold">+${s.yoyPct.toFixed(1)}%</span>`
                         : `<span class="text-blue-600">${s.yoyPct.toFixed(1)}%</span>`;
 
-                // 동기 YoY (25상반기 → 26상반기)
+                // 동기 YoY (25상반기 → 26상반기) — 증감액,(%) 병기
+                const h1Sign = s.h1Delta > 0 ? '+' : (s.h1Delta < 0 ? '-' : '');
+                const h1Cls = s.h1Pct > 0 ? 'text-red-600 font-bold' : (s.h1Pct < 0 ? 'text-blue-600 font-bold' : 'text-gray-500');
                 const h1Str = s.sum25h1 === 0
                     ? (s.sum26 === 0 ? '—' : '신규')
-                    : s.h1Pct >= 0
-                        ? `<span class="text-red-600 font-bold">+${s.h1Pct.toFixed(1)}%</span>`
-                        : `<span class="text-blue-600">${s.h1Pct.toFixed(1)}%</span>`;
+                    : `${h1Sign}${fmt(Math.abs(s.h1Delta))} (${pctStr(s.h1Pct)})`;
 
                 return `<tr class="cursor-pointer hover:bg-blue-50" onclick="selectDept(${s.idx})">
                     <td class="text-left font-semibold">${s.name}</td>
                     <td class="number-cell">${fmt(s.sum24)}</td>
                     <td class="number-cell">${fmt(s.sum25)}</td>
-                    <td class="number-cell">${fmt(s.yoyDelta)}</td>
                     <td class="number-cell">${yoyStr}</td>
+                    <td class="number-cell">${fmt(s.sum25h1)}</td>
                     <td class="number-cell">${fmt(s.sum26)}</td>
-                    <td class="number-cell">${h1Str}</td>
+                    <td class="number-cell ${h1Cls}">${h1Str}</td>
                     <td class="number-cell">${s.acctCount}</td>
                 </tr>`;
             }).join('');
@@ -837,6 +846,7 @@
                         y25h1: h1v,
                         yoyDelta: yoyDelta,
                         yoyPct: yoyPct,
+                        h1Delta: h1Delta,
                         h1Pct: h1Pct
                     };
                 })
@@ -854,21 +864,21 @@
                         ? `<span class="text-red-600 font-bold">+${r.yoyPct.toFixed(1)}%</span>`
                         : `<span class="text-blue-600">${r.yoyPct.toFixed(1)}%</span>`;
 
+                const h1Sign = r.h1Delta > 0 ? '+' : (r.h1Delta < 0 ? '-' : '');
+                const h1Cls = r.h1Pct > 0 ? 'text-red-600 font-bold' : (r.h1Pct < 0 ? 'text-blue-600 font-bold' : 'text-gray-500');
                 const h1Str = r.y25h1 === 0
                     ? (r.y26 === 0 ? '—' : '신규')
-                    : r.h1Pct >= 0
-                        ? `<span class="text-red-600 font-bold">+${r.h1Pct.toFixed(1)}%</span>`
-                        : `<span class="text-blue-600">${r.h1Pct.toFixed(1)}%</span>`;
+                    : `${h1Sign}${fmt(Math.abs(r.h1Delta))} (${pctStr(r.h1Pct)})`;
 
                 return `
                     <tr>
                         <td class="text-left">${r.name}</td>
                         <td class="number-cell">${fmt(r.y24)}</td>
                         <td class="number-cell">${fmt(r.y25)}</td>
-                        <td class="number-cell">${fmt(r.yoyDelta)}</td>
                         <td class="number-cell">${yoyStr}</td>
+                        <td class="number-cell">${fmt(r.y25h1)}</td>
                         <td class="number-cell">${fmt(r.y26)}</td>
-                        <td class="number-cell">${h1Str}</td>
+                        <td class="number-cell ${h1Cls}">${h1Str}</td>
                     </tr>
                 `;
             }).join('');
