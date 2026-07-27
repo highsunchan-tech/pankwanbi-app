@@ -501,7 +501,9 @@
         // 한 행의 셀들 생성
         function rowCells(name, y24, y25, m26, y26, y25h1, indent, txtClass, arrow) {
             const yoy2425 = pct(y25, y24);
+            const h1Delta = y26 - y25h1;
             const yoyH1 = pct(y26, y25h1);
+            const h1DeltaSign = h1Delta > 0 ? '+' : (h1Delta < 0 ? '-' : '');
             const pad = indent * 18 + 8;
             const arw = (arrow !== null)
                 ? `<span class="arw inline-block w-4 text-center">${arrow}</span> `
@@ -510,9 +512,10 @@
             c += `<td class="number-cell ${txtClass}">${fmt(y24)}</td>`;
             c += `<td class="number-cell ${txtClass}">${fmt(y25)}</td>`;
             c += `<td class="number-cell ${pctClass(yoy2425)}">${pctStr(yoy2425)}</td>`;
+            c += `<td class="number-cell ${txtClass}">${fmt(y25h1)}</td>`;
             m26.forEach(v => { c += `<td class="number-cell ${txtClass}">${fmt(v)}</td>`; });
             c += `<td class="number-cell ${txtClass}">${fmt(y26)}</td>`;
-            c += `<td class="number-cell ${pctClass(yoyH1)}">${pctStr(yoyH1)}</td>`;
+            c += `<td class="number-cell ${pctClass(yoyH1)}">${h1DeltaSign}${fmt(Math.abs(h1Delta))} (${pctStr(yoyH1)})</td>`;
             return c;
         }
 
@@ -525,7 +528,8 @@
             const headerRow = document.getElementById('timeSeriesHeader');
             let h = '<th class="text-left" style="min-width:260px;">계정 (▶ 클릭 시 상세)</th>';
             h += '<th class="number-cell">24년도(합계)</th><th class="number-cell">25년도(합계)</th><th class="number-cell">24년→25년(증감율)</th>';
-            h += `<th class="number-cell">26년 누적(${PERIOD_LABEL})</th><th class="number-cell">25년→26년(전년동기, ${PERIOD_LABEL})</th>`;
+            h += `<th class="number-cell">25년 누적(${PERIOD_LABEL})</th>`;
+            h += `<th class="number-cell">26년 누적(${PERIOD_LABEL})</th><th class="number-cell">전년 동기간(${PERIOD_LABEL}) 대비 증감액,(%)</th>`;
             headerRow.innerHTML = h;
 
             // 전체 합계
