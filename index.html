@@ -223,8 +223,8 @@
 
         <!-- ============ Tab 3: AI VIEW (이상치·절감·액션) ============ -->
         <div id="tab3" class="tab-content p-4">
-            <!-- KPI 카드 4개 -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+            <!-- KPI 카드 3개 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                 <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border-2 border-blue-300">
                     <p class="text-xs text-gray-600">2024년 판관비 총액</p>
                     <p class="text-xl font-bold text-blue-900" id="t3-2024">-</p>
@@ -237,11 +237,6 @@
                     <p class="text-xs text-gray-600">당기 판관비 (26년 1~5월)</p>
                     <p class="text-xl font-bold text-teal-900" id="t3-cur">-</p>
                     <p class="text-xs text-gray-500" id="t3-cur-sub">-</p>
-                </div>
-                <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border-2 border-green-300">
-                    <p class="text-xs text-gray-600">핵심 통제가능 비용 총액</p>
-                    <p class="text-xl font-bold text-green-900" id="t3-ctrl">-</p>
-                    <p class="text-xs text-gray-500" id="t3-ctrl-sub">-</p>
                 </div>
             </div>
 
@@ -1004,9 +999,6 @@
             document.getElementById('t3-2025').textContent = fmtEok(total25);
             document.getElementById('t3-cur').textContent = fmtEok(cur26);
             document.getElementById('t3-cur-sub').textContent = `26년 ${cumLabel} 누적`;
-            const ctrlTotal = ACCOUNTS.filter(a => isControllable(a.n)).reduce((s, a) => s + acc26cum(a), 0);
-            document.getElementById('t3-ctrl').textContent = fmtEok(ctrlTotal);
-            document.getElementById('t3-ctrl-sub').textContent = `26년 ${cumLabel} · 통제가능 계정 합산`;
 
             // 증감율 셀 HTML (신규/증감)
             const pctCell = (cur, prev) => {
