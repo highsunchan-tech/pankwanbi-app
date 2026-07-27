@@ -185,9 +185,20 @@
 
             <!-- 급증 부서 분석 -->
             <div id="spike-analysis-view" class="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-4 mt-4 shadow">
-                <h3 class="font-bold text-orange-900 mb-3" id="spike-analysis-title">⚠️ YoY 급증 부서 분석 (24년 대비 25년 증가 상위)</h3>
-                <div id="spike-analysis-content" class="bg-white p-3 rounded text-sm space-y-2">
-                    <p class="text-gray-500">분석 중...</p>
+                <h3 class="font-bold text-orange-900 mb-3" id="spike-analysis-title">⚠️ 급증 부서 분석 (증가 상위)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-xs font-bold text-orange-800 mb-2" id="spike-sub-yoy">24년→25년 (연간)</p>
+                        <div id="spike-analysis-content" class="bg-white p-3 rounded text-sm space-y-2">
+                            <p class="text-gray-500">분석 중...</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-orange-800 mb-2" id="spike-sub-h1">전년 동기간 대비</p>
+                        <div id="spike-analysis-content-h1" class="bg-white p-3 rounded text-sm space-y-2">
+                            <p class="text-gray-500">분석 중...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -243,6 +254,7 @@
                         <thead class="sticky top-0">
                             <tr>
                                 <th class="text-left">계정명</th>
+                                <th class="text-left">주요 부서(26년 누적 기준)</th>
                                 <th class="number-cell">2025년 1~5월<br>(전년 동기)</th>
                                 <th class="number-cell">2026년 1~5월<br>(당기)</th>
                                 <th class="number-cell">증감액</th>
@@ -250,7 +262,7 @@
                             </tr>
                         </thead>
                         <tbody id="t3-yoy-body">
-                            <tr><td colspan="5" class="text-center text-gray-500 py-4">분석 중...</td></tr>
+                            <tr><td colspan="6" class="text-center text-gray-500 py-4">분석 중...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -265,6 +277,7 @@
                         <thead class="sticky top-0">
                             <tr>
                                 <th class="text-left">계정명</th>
+                                <th class="text-left">주요 부서(26년 누적 기준)</th>
                                 <th class="number-cell">26년 4월(전월)</th>
                                 <th class="number-cell">26년 5월(당월)</th>
                                 <th class="number-cell">증감액</th>
@@ -272,7 +285,7 @@
                             </tr>
                         </thead>
                         <tbody id="t3-mom-body">
-                            <tr><td colspan="5" class="text-center text-gray-500 py-4">분석 중...</td></tr>
+                            <tr><td colspan="6" class="text-center text-gray-500 py-4">분석 중...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -691,31 +704,41 @@
 
         function renderSpikeAnalysis(deptIdx) {
             const isDept = (deptIdx === undefined || deptIdx === null);
-            let items;
+            let baseItems;
 
             if (isDept) {
-                items = computeDeptStats()
-                    .filter(s => s.sum24 > 0)
-                    .map(s => ({ name: s.name, sum24: s.sum24, sum25: s.sum25, yoyDelta: s.yoyDelta, yoyPct: s.yoyPct }));
-                document.getElementById('spike-analysis-title').textContent = '⚠️ YoY 급증 부서 분석 (24년 대비 25년 증가 상위)';
+                baseItems = computeDeptStats().map(s => ({
+                    name: s.name,
+                    sum24: s.sum24, sum25: s.sum25, yoyDelta: s.yoyDelta, yoyPct: s.yoyPct,
+                    sum25h1: s.sum25h1, sum26: s.sum26, h1Delta: s.h1Delta, h1Pct: s.h1Pct
+                }));
+                document.getElementById('spike-analysis-title').textContent = '⚠️ 급증 부서 분석 (증가 상위)';
             } else {
                 const deptName = DEPARTMENTS_TOP[deptIdx];
-                items = (ACCOUNTS_TOP || [])
-                    .filter(a => a.d && a.d[deptIdx] && a.d[deptIdx][0] > 0)
+                baseItems = (ACCOUNTS_TOP || [])
+                    .filter(a => a.d && a.d[deptIdx])
                     .map(a => {
-                        const [y24, y25] = a.d[deptIdx];
+                        const [y24, y25, y26raw, y25h1raw] = a.d[deptIdx];
+                        const y26 = y26raw || 0;
+                        const y25h1 = y25h1raw || 0;
                         const yoyDelta = y25 - y24;
-                        const yoyPct = y24 !== 0 ? (yoyDelta / y24 * 100) : 0;
-                        return { name: a.nm, sum24: y24, sum25: y25, yoyDelta, yoyPct };
+                        const yoyPct = y24 !== 0 ? (yoyDelta / y24 * 100) : (y25 !== 0 ? 100 : 0);
+                        const h1Delta = y26 - y25h1;
+                        const h1Pct = y25h1 !== 0 ? (h1Delta / y25h1 * 100) : (y26 !== 0 ? 100 : 0);
+                        return { name: a.nm, sum24: y24, sum25: y25, yoyDelta, yoyPct, sum25h1: y25h1, sum26: y26, h1Delta, h1Pct };
                     });
-                document.getElementById('spike-analysis-title').textContent = `⚠️ YoY 급증 계정 분석 — ${deptName} (24년 대비 25년 증가 상위)`;
+                document.getElementById('spike-analysis-title').textContent = `⚠️ 급증 계정 분석 — ${deptName} (증가 상위)`;
             }
 
-            items.sort((a, b) => b.yoyDelta - a.yoyDelta);
-            const topSpikes = items.filter(s => s.yoyPct > 25).slice(0, 5);
+            const emptyLabel = isDept ? '부서' : '계정';
 
-            const html = topSpikes.length > 0
-                ? topSpikes.map(s => `
+            // 패널1: 24년→25년 YoY 급증
+            const yoyItems = baseItems.filter(s => s.sum24 > 0);
+            yoyItems.sort((a, b) => b.yoyDelta - a.yoyDelta);
+            const topYoy = yoyItems.filter(s => s.yoyPct > 25).slice(0, 5);
+            document.getElementById('spike-sub-yoy').textContent = '24년→25년 (연간, 증가율 25%↑)';
+            document.getElementById('spike-analysis-content').innerHTML = topYoy.length > 0
+                ? topYoy.map(s => `
                     <div class="pb-2 border-b last:border-b-0">
                         <p class="font-semibold text-orange-700">${s.name}</p>
                         <p class="text-xs text-gray-600">
@@ -724,9 +747,24 @@
                         </p>
                     </div>
                 `).join('')
-                : `<p class="text-gray-500 text-sm">급격한 증가 ${isDept ? '부서' : '계정'} 없음</p>`;
+                : `<p class="text-gray-500 text-sm">급격한 증가 ${emptyLabel} 없음</p>`;
 
-            document.getElementById('spike-analysis-content').innerHTML = html;
+            // 패널2: 전년 동기간(1~N월) 대비 급증
+            const h1Items = baseItems.filter(s => s.sum25h1 > 0);
+            h1Items.sort((a, b) => b.h1Delta - a.h1Delta);
+            const topH1 = h1Items.filter(s => s.h1Pct > 25).slice(0, 5);
+            document.getElementById('spike-sub-h1').textContent = `전년 동기간(${PERIOD_LABEL}) 대비 (증가율 25%↑)`;
+            document.getElementById('spike-analysis-content-h1').innerHTML = topH1.length > 0
+                ? topH1.map(s => `
+                    <div class="pb-2 border-b last:border-b-0">
+                        <p class="font-semibold text-orange-700">${s.name}</p>
+                        <p class="text-xs text-gray-600">
+                            25년 동기: ${fmt(s.sum25h1)} → 26년: ${fmt(s.sum26)}
+                            | +${fmt(s.h1Delta)} (${s.h1Pct.toFixed(1)}↑)
+                        </p>
+                    </div>
+                `).join('')
+                : `<p class="text-gray-500 text-sm">급격한 증가 ${emptyLabel} 없음</p>`;
         }
 
         // 탭2 표 헤더 (탭1 시계열 표와 동일한 컬럼 구성: 24년/25년/24→25%/25년누적/26년누적/전년동기대비 증감액,(%))
@@ -914,6 +952,26 @@
         function acc26cum(a) { return sum(a.y26.slice(0, N26)); }
         function acc25cum(a) { return sum(a.y25.slice(0, N26)); }
 
+        // 계정코드 → 부서별 배분(ACCOUNTS_TOP) 매핑, 탭3 "주요 부서" 표시용
+        const ACCT_DEPT_MAP = {};
+        if (typeof ACCOUNTS_TOP !== 'undefined') {
+            ACCOUNTS_TOP.forEach(a => { ACCT_DEPT_MAP[a.c] = a; });
+        }
+        // 계정코드로 26년 누적 기준 최대 지출 부서 라벨 반환 ("부서명 (비중%)")
+        function topDeptLabel(code) {
+            const entry = ACCT_DEPT_MAP[code];
+            if (!entry || !entry.d) return '<span class="text-gray-400">-</span>';
+            let bestIdx = -1, bestVal = 0, total = 0;
+            entry.d.forEach((row, i) => {
+                const v = row[2] || 0; // 26년 누적
+                total += v;
+                if (v > bestVal) { bestVal = v; bestIdx = i; }
+            });
+            if (bestIdx === -1 || total <= 0) return '<span class="text-gray-400">-</span>';
+            const pct = (bestVal / total * 100).toFixed(0);
+            return `${DEPARTMENTS_TOP[bestIdx]} <span class="text-gray-400">(${pct}%)</span>`;
+        }
+
         // 4. 탭3 렌더링 (YoY 이상징후 + MoM 당월 스파이크)
         function renderTab3() {
             if (!ACCOUNTS || !ACCOUNTS.length) return;
@@ -952,18 +1010,19 @@
                 if (delta < 10000000) return;        // 증가액 1천만원↑
                 const pct = c25 > 0 ? delta / c25 * 100 : Infinity;
                 if (pct !== Infinity && pct < 25) return;   // 증가율 25%↑ (신규는 통과)
-                yoyRows.push({ name: a.n, c25, c26, delta });
+                yoyRows.push({ name: a.n, code: a.c, c25, c26, delta });
             });
             yoyRows.sort((x, y) => y.delta - x.delta);
             document.getElementById('t3-yoy-body').innerHTML = yoyRows.length ? yoyRows.slice(0, 8).map(r => `
                 <tr>
                     <td class="text-left">${r.name}</td>
+                    <td class="text-left">${topDeptLabel(r.code)}</td>
                     <td class="number-cell">${fmt(r.c25)}</td>
                     <td class="number-cell">${fmt(r.c26)}</td>
                     <td class="number-cell text-red-600 font-bold">+${fmt(r.delta)}</td>
                     <td class="number-cell">${pctCell(r.c26, r.c25)}</td>
                 </tr>`).join('')
-                : '<tr><td colspan="5" class="text-center text-gray-400 py-4">조건에 해당하는 항목 없음</td></tr>';
+                : '<tr><td colspan="6" class="text-center text-gray-400 py-4">조건에 해당하는 항목 없음</td></tr>';
 
             // ===== 표2: 당월 스파이크 — 전월 대비(MoM) 급증 =====
             const momRows = [];
@@ -976,18 +1035,19 @@
                 if (delta < 5000000) return;         // 증가액 500만원↑
                 const pct = prev > 0 ? delta / prev * 100 : Infinity;
                 if (pct !== Infinity && pct < 50) return;   // 증가율 50%↑ (신규는 통과)
-                momRows.push({ name: a.n, prev, cur, delta });
+                momRows.push({ name: a.n, code: a.c, prev, cur, delta });
             });
             momRows.sort((x, y) => y.delta - x.delta);
             document.getElementById('t3-mom-body').innerHTML = momRows.length ? momRows.slice(0, 8).map(r => `
                 <tr>
                     <td class="text-left">${r.name}</td>
+                    <td class="text-left">${topDeptLabel(r.code)}</td>
                     <td class="number-cell">${fmt(r.prev)}</td>
                     <td class="number-cell">${fmt(r.cur)}</td>
                     <td class="number-cell text-orange-700 font-bold">+${fmt(r.delta)}</td>
                     <td class="number-cell">${pctCell(r.cur, r.prev)}</td>
                 </tr>`).join('')
-                : '<tr><td colspan="5" class="text-center text-gray-400 py-4">스파이크 의심 항목 없음 ✓</td></tr>';
+                : '<tr><td colspan="6" class="text-center text-gray-400 py-4">스파이크 의심 항목 없음 ✓</td></tr>';
         }
 
         // ============ 초기화 ============
