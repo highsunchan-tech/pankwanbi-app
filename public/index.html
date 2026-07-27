@@ -27,6 +27,9 @@
         .kpi-value { font-size: 1.5rem; font-weight: 700; margin: 0.4rem 0; }
         .kpi-label { font-size: 0.75rem; opacity: 0.9; }
 
+        @keyframes acctHighlight { 0%,100% { background-color: #fef08a; } 50% { background-color: #fde047; } }
+        .acct-highlight td { animation: acctHighlight 0.6s ease-in-out 3; }
+
         .accordion-toggle { cursor: pointer; user-select: none; }
         .accordion-toggle:hover { background-color: #1a3d66; }
 
@@ -77,7 +80,7 @@
         <!-- ============ Tab 1: 시계열 분석 ============ -->
         <div id="tab1" class="tab-content active p-4">
             <!-- KPI Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                 <div class="kpi-card">
                     <div class="kpi-label">2024년 연간 판관비</div>
                     <div class="kpi-value" id="kpi1">-</div>
@@ -91,10 +94,6 @@
                     <div class="kpi-label" id="kpi3label">2026년 누적</div>
                     <div class="kpi-value" id="kpi3">-</div>
                     <div class="text-xs font-semibold text-yellow-200" id="kpi3yoy">-</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">계정 / 부서 수</div>
-                    <div class="kpi-value" id="kpi4">-</div>
                 </div>
             </div>
 
@@ -414,8 +413,6 @@
             const h1_yoy = total25 !== 0 ? ((total26 / total25 - 1) * 100) : 0;
             const h1_yoyText = h1_yoy >= 0 ? `+${h1_yoy.toFixed(1)}%` : `${h1_yoy.toFixed(1)}%`;
             document.getElementById('kpi3yoy').textContent = `(25년 전체(연간) 대비 ${h1_yoyText})`;
-
-            document.getElementById('kpi4').textContent = (ACCOUNTS_TOP ? ACCOUNTS_TOP.length : 0) + ' / 17';
         }
 
         // ============ 요약 박스 (증감액 큰 순, 금액+% 병기) ============
@@ -442,8 +439,8 @@
             const el = document.getElementById(id);
             if (!list.length) { el.innerHTML = '<p class="text-gray-400">해당 없음</p>'; return; }
             el.innerHTML = list.map(x =>
-                `<div class="flex justify-between gap-2">
-                    <span class="truncate">${x.name}</span>
+                `<div class="flex justify-between gap-2 cursor-pointer hover:bg-red-100 rounded px-1" onclick="jumpToAccount('${x.code}')" title="클릭하면 판관비 시계열 표에서 상세 확인">
+                    <span class="truncate underline decoration-dotted">${x.name}</span>
                     <span class="whitespace-nowrap font-bold ${cls}">${fmtDelta(x.d)} <span class="text-gray-500 font-normal">(${deltaPctStr(x.cur, x.prev)})</span></span>
                 </div>`
             ).join('');
@@ -454,7 +451,7 @@
             if (!ACCOUNTS) return;
 
             const cum = ACCOUNTS.map(a => {
-                return { name: a.n, cur: a.y26sum, prev: a.y25h1sum, d: a.y26sum - a.y25h1sum };
+                return { name: a.n, code: a.c, cur: a.y26sum, prev: a.y25h1sum, d: a.y26sum - a.y25h1sum };
             });
 
             fillSummaryPanel('summary-up', cum, true);
@@ -562,7 +559,7 @@
                       + rowCells(`${g.name} <span class="text-gray-400 font-normal">(${g.accounts.length})</span>`, g.y24, g.y25, g.m26, g.y26, g.y25h1, 1, '', open ? '▼' : '▶')
                       + `</tr>`;
                 g.accounts.forEach(a => {
-                    rows += `<tr class="tab1-detail ${open ? '' : 'hidden'}" data-gi="${gi}">`
+                    rows += `<tr id="acct-${a.c}" class="tab1-detail ${open ? '' : 'hidden'}" data-gi="${gi}">`
                           + rowCells(a.n, a.y24sum, a.y25sum, [], a.y26sum, a.y25h1sum, 2, 'text-gray-600', null)
                           + `</tr>`;
                 });
@@ -591,6 +588,28 @@
             details.forEach(r => r.classList.toggle('hidden', isOpen));
             const arw = groupRow ? groupRow.querySelector('.arw') : null;
             if (arw) arw.textContent = isOpen ? '▶' : '▼';
+        }
+
+        // 요약 박스(TOP5) 클릭 시 시계열 표에서 해당 계정 행으로 이동 + 하이라이트
+        function jumpToAccount(code) {
+            const searchInput = document.getElementById('tab1-search');
+            if (searchInput && searchInput.value) { searchInput.value = ''; renderTimeSeriesTable(); }
+
+            _tab1TopOpen = true;
+            document.querySelectorAll('#timeSeriesTable .tab1-group').forEach(r => r.classList.remove('hidden'));
+            const topArw = document.querySelector('#timeSeriesTable tr:first-child .arw');
+            if (topArw) topArw.textContent = '▼';
+
+            const row = document.getElementById('acct-' + code);
+            if (!row) return;
+            const gi = row.getAttribute('data-gi');
+            document.querySelectorAll(`#timeSeriesTable .tab1-detail[data-gi="${gi}"]`).forEach(r => r.classList.remove('hidden'));
+            const groupRow = document.querySelector(`#timeSeriesTable .tab1-group[data-gi="${gi}"]`);
+            if (groupRow) { const arw = groupRow.querySelector('.arw'); if (arw) arw.textContent = '▼'; }
+
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            row.classList.add('acct-highlight');
+            setTimeout(() => row.classList.remove('acct-highlight'), 1800);
         }
 
         function expandAllGroups() {
