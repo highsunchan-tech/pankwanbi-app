@@ -163,6 +163,14 @@
                 </select>
             </div>
 
+            <!-- 계정 → 부서별 사용현황 검색 -->
+            <div class="bg-white rounded-lg shadow-md p-4 mb-4">
+                <label class="font-bold text-sm text-gray-700 block mb-2">🔍 계정명으로 검색 (어느 부서가 얼마나 썼는지 보기)</label>
+                <input type="text" id="acctDeptSearch" placeholder="예: 광고선전비, 인터넷 검색 광고" class="w-full md:w-96 px-3 py-2 border-2 border-gray-300 rounded text-sm" oninput="onAcctDeptSearchInput()">
+                <div id="acctDeptMatches" class="flex flex-wrap gap-2 mt-2"></div>
+                <div id="acctDeptResultWrap" class="mt-3"></div>
+            </div>
+
             <!-- 부서별 상세 분석 테이블 -->
             <div id="dept-ranking-view">
                 <div class="bg-white rounded-lg shadow-md p-4">
@@ -551,7 +559,7 @@
                       + rowCells(`${g.name} <span class="text-gray-400 font-normal">(${g.accounts.length})</span>`, g.y24, g.y25, g.m26, g.y26, g.y25h1, 1, '', open ? '▼' : '▶')
                       + `</tr>`;
                 g.accounts.forEach(a => {
-                    rows += `<tr id="acct-${a.c}" class="tab1-detail ${open ? '' : 'hidden'}" data-gi="${gi}">`
+                    rows += `<tr id="acct-${a.c}" class="tab1-detail ${open ? '' : 'hidden'} cursor-pointer hover:bg-yellow-50" data-gi="${gi}" onclick="goToTab2Account('${a.c}')" title="클릭하면 탭2에서 부서별 사용현황 보기">`
                           + rowCells(a.n, a.y24sum, a.y25sum, [], a.y26sum, a.y25h1sum, 2, 'text-gray-600', null)
                           + `</tr>`;
                 });
@@ -799,6 +807,115 @@
                 <th class="number-cell">2026년(${PERIOD_LABEL})</th>
                 <th class="number-cell">전년 동기간(${PERIOD_LABEL}) 대비 증감액,(%)</th>
             `;
+        }
+
+        // 계정명 검색 → 일치하는 계정 목록(칩) 표시, 1건이면 바로 상세 조회
+        function onAcctDeptSearchInput() {
+            const q = document.getElementById('acctDeptSearch').value.trim();
+            const matchesEl = document.getElementById('acctDeptMatches');
+            const resultEl = document.getElementById('acctDeptResultWrap');
+            if (!q) { matchesEl.innerHTML = ''; resultEl.innerHTML = ''; return; }
+
+            const matches = (ACCOUNTS_TOP || []).filter(a => a.nm.includes(q)).slice(0, 15);
+            if (matches.length === 0) {
+                matchesEl.innerHTML = '';
+                resultEl.innerHTML = '<p class="text-gray-400 text-sm">일치하는 계정이 없습니다</p>';
+                return;
+            }
+            if (matches.length === 1) {
+                matchesEl.innerHTML = '';
+                showAcctDeptBreakdown(matches[0].c);
+                return;
+            }
+            matchesEl.innerHTML = matches.map(a =>
+                `<span class="cursor-pointer bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full" onclick="showAcctDeptBreakdown('${a.c}')">${a.nm}</span>`
+            ).join('');
+            resultEl.innerHTML = `<p class="text-gray-400 text-sm">${matches.length}건 일치 — 위에서 계정을 선택하세요</p>`;
+        }
+
+        // 계정코드 → 부서별(17개) 사용현황 표 렌더링
+        function showAcctDeptBreakdown(code) {
+            const entry = ACCT_DEPT_MAP[code];
+            const resultEl = document.getElementById('acctDeptResultWrap');
+            document.getElementById('acctDeptMatches').innerHTML = '';
+            if (!entry) { resultEl.innerHTML = '<p class="text-gray-400 text-sm">데이터 없음</p>'; return; }
+            document.getElementById('acctDeptSearch').value = entry.nm;
+
+            const rows = entry.d.map((r, i) => {
+                const y24 = r[0] || 0, y25 = r[1] || 0, y26 = r[2] || 0, y25h1 = r[3] || 0;
+                return { name: DEPARTMENTS_TOP[i], y24, y25, y26, y25h1 };
+            }).filter(r => r.y24 !== 0 || r.y25 !== 0 || r.y26 !== 0 || r.y25h1 !== 0);
+            rows.sort((a, b) => b.y26 - a.y26);
+            const total26 = rows.reduce((s, r) => s + r.y26, 0);
+
+            const bodyHtml = rows.map(r => {
+                const yoyPct = pct(r.y25, r.y24);
+                const h1Delta = r.y26 - r.y25h1;
+                const h1Pct = pct(r.y26, r.y25h1);
+                const h1Sign = h1Delta > 0 ? '+' : (h1Delta < 0 ? '-' : '');
+                const h1Cls = h1Pct > 0 ? 'text-red-600 font-bold' : (h1Pct < 0 ? 'text-blue-600 font-bold' : 'text-gray-500');
+                const h1Str = r.y25h1 === 0 ? (r.y26 === 0 ? '—' : '신규') : `${h1Sign}${fmt(Math.abs(h1Delta))} (${pctStr(h1Pct)})`;
+                const sharePct = total26 > 0 ? (r.y26 / total26 * 100).toFixed(1) : '0.0';
+                return `<tr>
+                    <td class="text-left font-semibold">${r.name}</td>
+                    <td class="number-cell">${fmt(r.y24)}</td>
+                    <td class="number-cell">${fmt(r.y25)}</td>
+                    <td class="number-cell ${pctClass(yoyPct)}">${pctStr(yoyPct)}</td>
+                    <td class="number-cell">${fmt(r.y25h1)}</td>
+                    <td class="number-cell">${fmt(r.y26)}</td>
+                    <td class="number-cell ${h1Cls}">${h1Str}</td>
+                    <td class="number-cell">${sharePct}%</td>
+                </tr>`;
+            }).join('');
+
+            resultEl.innerHTML = `
+                <h3 class="font-bold text-gray-800 mb-2">📋 ${entry.nm} — 부서별 사용 현황 (${rows.length}개 부서)</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs">
+                        <thead class="sticky top-0">
+                            <tr>
+                                <th class="text-left">부서명</th>
+                                <th class="number-cell">2024년</th>
+                                <th class="number-cell">2025년</th>
+                                <th class="number-cell">24년→25년(증감율)</th>
+                                <th class="number-cell">25년 누적(${PERIOD_LABEL})</th>
+                                <th class="number-cell">26년 누적(${PERIOD_LABEL})</th>
+                                <th class="number-cell">전년 동기간(${PERIOD_LABEL}) 대비 증감액,(%)</th>
+                                <th class="number-cell">26년 비중</th>
+                            </tr>
+                        </thead>
+                        <tbody>${bodyHtml || '<tr><td colspan="8" class="text-center text-gray-400 py-4">데이터 없음</td></tr>'}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // 탭1 계정 행 클릭 → 탭2로 전환 + 해당 계정의 부서별 사용현황 표시
+        function goToTab2Account(code) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-blue-900', 'text-blue-900');
+                btn.classList.add('border-transparent', 'text-gray-600');
+            });
+            document.getElementById('tab2').classList.add('active');
+            const tab2Btn = document.querySelectorAll('.tab-btn')[1];
+            if (tab2Btn) {
+                tab2Btn.classList.add('border-blue-900', 'text-blue-900');
+                tab2Btn.classList.remove('border-transparent', 'text-gray-600');
+            }
+
+            if (!tab2Loaded) {
+                renderDeptTableHeaders();
+                renderDeptFilterOptions();
+                renderDeptRanking();
+                tab2Loaded = true;
+            }
+
+            showAcctDeptBreakdown(code);
+            setTimeout(() => {
+                const el = document.getElementById('acctDeptResultWrap');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 50);
         }
 
         function renderDeptFilterOptions() {
