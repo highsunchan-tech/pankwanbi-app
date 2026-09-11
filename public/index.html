@@ -339,12 +339,16 @@
             return formatted;
         }
         function fmtEok(num) { return (num / 100000000).toFixed(1) + '억'; }
+        // 기준값(b)이 0이면 "신규 발생/소멸"로 취급 — 0%(무변동)가 아니라 실제 증감 방향(Infinity)으로 처리
         function pct(a, b) {
-            if (!b) return 0;
+            if (!b) return a > 0 ? Infinity : (a < 0 ? -Infinity : 0);
             return ((a - b) / Math.abs(b) * 100);
         }
         function pctClass(p) { return p > 0 ? 'text-red-600 font-bold' : (p < 0 ? 'text-blue-600 font-bold' : 'text-gray-500'); }
-        function pctStr(p) { return (p > 0 ? '+' : '') + p.toFixed(1) + '%'; }
+        function pctStr(p) {
+            if (p === Infinity || p === -Infinity) return '신규';
+            return (p > 0 ? '+' : '') + p.toFixed(1) + '%';
+        }
 
         // 2026년에 데이터가 있는 월 수 (6월까지면 6, 7월 추가되면 7 ... 자동)
         const N26 = (typeof MONTHS_2026_COUNT !== 'undefined' && MONTHS_2026_COUNT > 0)
@@ -738,11 +742,11 @@
 
                 // YoY 분석 (24→25)
                 const yoyDelta = sum25 - sum24;
-                const yoyPct = sum24 !== 0 ? (yoyDelta / sum24 * 100) : (sum25 !== 0 ? 100 : 0);
+                const yoyPct = pct(sum25, sum24);
 
                 // 동기 YoY (25년 동기 → 26년, 같은 기간끼리 비교)
                 const h1Delta = sum26 - sum25h1;
-                const h1Pct = sum25h1 !== 0 ? (h1Delta / sum25h1 * 100) : (sum26 !== 0 ? 100 : 0);
+                const h1Pct = pct(sum26, sum25h1);
 
                 return {
                     idx,
@@ -946,8 +950,8 @@
                 const h1Delta = r.y26 - r.y25h1;
                 const h1Pct = pct(r.y26, r.y25h1);
                 const h1Sign = h1Delta > 0 ? '+' : (h1Delta < 0 ? '-' : '');
-                const h1Cls = h1Pct > 0 ? 'text-red-600 font-bold' : (h1Pct < 0 ? 'text-blue-600 font-bold' : 'text-gray-500');
-                const h1Str = r.y25h1 === 0 ? (r.y26 === 0 ? '—' : '신규') : `${h1Sign}${fmt(Math.abs(h1Delta))} (${pctStr(h1Pct)})`;
+                const h1Cls = pctClass(h1Pct);
+                const h1Str = (r.y25h1 === 0 && r.y26 === 0) ? '—' : `${h1Sign}${fmt(Math.abs(h1Delta))} (${pctStr(h1Pct)})`;
                 const sharePct = total26 > 0 ? (r.y26 / total26 * 100).toFixed(1) : '0.0';
                 return `<tr>
                     <td class="text-left font-semibold">${r.name}</td>
@@ -1023,18 +1027,14 @@
             stats.sort((a, b) => (tab2SortValue(a, tab2Sort.key) - tab2SortValue(b, tab2Sort.key)) * tab2Sort.dir);
 
             document.getElementById('deptRankingTable').innerHTML = stats.map(s => {
-                // YoY 표시 (24→25)
-                const yoyStr = s.sum24 === 0
-                    ? '신규'
-                    : s.yoyPct >= 0
-                        ? `<span class="text-red-600 font-bold">+${s.yoyPct.toFixed(1)}%</span>`
-                        : `<span class="text-blue-600">${s.yoyPct.toFixed(1)}%</span>`;
+                // YoY 표시 (24→25) — 신규/소멸 포함 공통 pct 규칙 적용
+                const yoyStr = `<span class="${pctClass(s.yoyPct)}">${pctStr(s.yoyPct)}</span>`;
 
                 // 동기 YoY (25상반기 → 26상반기) — 증감액,(%) 병기
                 const h1Sign = s.h1Delta > 0 ? '+' : (s.h1Delta < 0 ? '-' : '');
-                const h1Cls = s.h1Pct > 0 ? 'text-red-600 font-bold' : (s.h1Pct < 0 ? 'text-blue-600 font-bold' : 'text-gray-500');
-                const h1Str = s.sum25h1 === 0
-                    ? (s.sum26 === 0 ? '—' : '신규')
+                const h1Cls = pctClass(s.h1Pct);
+                const h1Str = (s.sum25h1 === 0 && s.sum26 === 0)
+                    ? '—'
                     : `${h1Sign}${fmt(Math.abs(s.h1Delta))} (${pctStr(s.h1Pct)})`;
 
                 return `<tr class="cursor-pointer hover:bg-blue-50" onclick="selectDept(${s.idx})">
@@ -1088,12 +1088,12 @@
 
                     // YoY 분석 (24→25)
                     const yoyDelta = y25 - y24;
-                    const yoyPct = y24 !== 0 ? (yoyDelta / y24 * 100) : (y25 !== 0 ? 100 : 0);
+                    const yoyPct = pct(y25, y24);
 
                     // 동기 YoY (25상반기 → 26상반기)
                     const h1v = y25h1 || 0;
                     const h1Delta = y26 - h1v;
-                    const h1Pct = h1v !== 0 ? (h1Delta / h1v * 100) : (y26 !== 0 ? 100 : 0);
+                    const h1Pct = pct(y26, h1v);
 
                     return {
                         name: a.nm,
@@ -1116,16 +1116,12 @@
             }
 
             document.getElementById('deptDetailTable').innerHTML = rows.map(r => {
-                const yoyStr = r.y24 === 0
-                    ? '신규'
-                    : r.yoyPct >= 0
-                        ? `<span class="text-red-600 font-bold">+${r.yoyPct.toFixed(1)}%</span>`
-                        : `<span class="text-blue-600">${r.yoyPct.toFixed(1)}%</span>`;
+                const yoyStr = `<span class="${pctClass(r.yoyPct)}">${pctStr(r.yoyPct)}</span>`;
 
                 const h1Sign = r.h1Delta > 0 ? '+' : (r.h1Delta < 0 ? '-' : '');
-                const h1Cls = r.h1Pct > 0 ? 'text-red-600 font-bold' : (r.h1Pct < 0 ? 'text-blue-600 font-bold' : 'text-gray-500');
-                const h1Str = r.y25h1 === 0
-                    ? (r.y26 === 0 ? '—' : '신규')
+                const h1Cls = pctClass(r.h1Pct);
+                const h1Str = (r.y25h1 === 0 && r.y26 === 0)
+                    ? '—'
                     : `${h1Sign}${fmt(Math.abs(r.h1Delta))} (${pctStr(r.h1Pct)})`;
 
                 return `
