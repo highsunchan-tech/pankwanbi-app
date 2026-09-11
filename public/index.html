@@ -498,11 +498,44 @@
                     g.y26 += a.y26sum;
                     g.y25h1 += a.y25h1sum;
                 });
-                g.size = g.y26;
-                g.accounts.sort((x,y) => y.y26sum - x.y26sum);
             });
-            arr.sort((x,y) => y.size - x.size);
             return arr;
+        }
+
+        // ============ 탭1 정렬 상태 ============
+        // key: 'y24' | 'y25' | 'yoy2425' | 'y25h1' | 'y26' | 'delta'  dir: -1(내림차순) | 1(오름차순)
+        let tab1Sort = { key: 'y26', dir: -1 };
+        const TAB1_SORT_COLS = [
+            { key: 'y24', label: '24년도(합계)' },
+            { key: 'y25', label: '25년도(합계)' },
+            { key: 'yoy2425', label: '24년→25년(증감율)' },
+            { key: 'y25h1', label: null }, // 라벨은 PERIOD_LABEL 포함이라 별도 생성
+            { key: 'y26', label: null },
+            { key: 'delta', label: null }
+        ];
+        function sortMetric(y24, y25, y26, y25h1, key) {
+            switch (key) {
+                case 'y24': return y24;
+                case 'y25': return y25;
+                case 'yoy2425': return pct(y25, y24);
+                case 'y25h1': return y25h1;
+                case 'y26': return y26;
+                case 'delta': return y26 - y25h1;
+                default: return 0;
+            }
+        }
+        // getY24~getY25h1: 리스트 원소에서 각 값을 뽑는 함수 (그룹/계정 필드명이 다르므로)
+        function sortByTab1(list, getY24, getY25, getY26, getY25h1) {
+            const { key, dir } = tab1Sort;
+            list.sort((a, b) => (
+                sortMetric(getY24(a), getY25(a), getY26(a), getY25h1(a), key) -
+                sortMetric(getY24(b), getY25(b), getY26(b), getY25h1(b), key)
+            ) * dir);
+        }
+        function setTab1Sort(key) {
+            if (tab1Sort.key === key) tab1Sort.dir *= -1;
+            else { tab1Sort.key = key; tab1Sort.dir = -1; }
+            renderTimeSeriesTable();
         }
 
         // 한 행의 셀들 생성
@@ -531,12 +564,15 @@
             const search = (document.getElementById('tab1-search').value || '').trim();
             const searching = search.length > 0;
 
-            // 헤더
+            // 헤더 (클릭하면 해당 컬럼 기준 정렬, 다시 클릭하면 오름차순↔내림차순 토글)
             const headerRow = document.getElementById('timeSeriesHeader');
+            const sortArrow = (key) => tab1Sort.key === key ? (tab1Sort.dir === -1 ? ' ▼' : ' ▲') : '';
+            const sortTh = (key, label) =>
+                `<th class="number-cell cursor-pointer select-none hover:bg-blue-100" onclick="setTab1Sort('${key}')" title="클릭 시 정렬">${label}${sortArrow(key)}</th>`;
             let h = '<th class="text-left" style="min-width:260px;">계정 (▶ 클릭 시 상세)</th>';
-            h += '<th class="number-cell">24년도(합계)</th><th class="number-cell">25년도(합계)</th><th class="number-cell">24년→25년(증감율)</th>';
-            h += `<th class="number-cell">25년 누적(${PERIOD_LABEL})</th>`;
-            h += `<th class="number-cell">26년 누적(${PERIOD_LABEL})</th><th class="number-cell">전년 동기간(${PERIOD_LABEL}) 대비 증감액,(%)</th>`;
+            h += sortTh('y24', '24년도(합계)') + sortTh('y25', '25년도(합계)') + sortTh('yoy2425', '24년→25년(증감율)');
+            h += sortTh('y25h1', `25년 누적(${PERIOD_LABEL})`);
+            h += sortTh('y26', `26년 누적(${PERIOD_LABEL})`) + sortTh('delta', `전년 동기간(${PERIOD_LABEL}) 대비 증감액,(%)`);
             headerRow.innerHTML = h;
 
             // 전체 합계
@@ -555,6 +591,12 @@
                     return null;
                 }).filter(Boolean);
             }
+
+            // 선택된 컬럼 기준으로 그룹 정렬 + 각 그룹 내 상세계정 정렬
+            sortByTab1(groups, g => g.y24, g => g.y25, g => g.y26, g => g.y25h1);
+            groups.forEach(g => {
+                sortByTab1(g.accounts, a => a.y24sum, a => a.y25sum, a => a.y26sum, a => a.y25h1sum);
+            });
 
             let rows = '';
             // Level 1: 판매비와관리비 (전체)
@@ -795,17 +837,41 @@
         }
 
         // 탭2 표 헤더 (탭1 시계열 표와 동일한 컬럼 구성: 24년/25년/24→25%/25년누적/26년누적/전년동기대비 증감액,(%))
+        // 탭2 부서별 랭킹 정렬 상태
+        let tab2Sort = { key: 'sum26', dir: -1 };
+        function tab2SortValue(s, key) {
+            switch (key) {
+                case 'sum24': return s.sum24;
+                case 'sum25': return s.sum25;
+                case 'yoyPct': return s.yoyPct;
+                case 'sum25h1': return s.sum25h1;
+                case 'sum26': return s.sum26;
+                case 'h1Delta': return s.h1Delta;
+                case 'acctCount': return s.acctCount;
+                default: return 0;
+            }
+        }
+        function setTab2Sort(key) {
+            if (tab2Sort.key === key) tab2Sort.dir *= -1;
+            else { tab2Sort.key = key; tab2Sort.dir = -1; }
+            renderDeptTableHeaders();
+            renderDeptRanking();
+        }
+
         function renderDeptTableHeaders() {
             const h1 = document.getElementById('deptRankingHeader');
+            const arw2 = (key) => tab2Sort.key === key ? (tab2Sort.dir === -1 ? ' ▼' : ' ▲') : '';
+            const th2 = (key, label) =>
+                `<th class="number-cell cursor-pointer select-none hover:bg-blue-100" onclick="setTab2Sort('${key}')" title="클릭 시 정렬">${label}${arw2(key)}</th>`;
             if (h1) h1.innerHTML = `
                 <th class="text-left">부서명</th>
-                <th class="number-cell">2024년</th>
-                <th class="number-cell">2025년</th>
-                <th class="number-cell">24년→25년(증감율)</th>
-                <th class="number-cell">25년 누적(${PERIOD_LABEL})</th>
-                <th class="number-cell">2026년(${PERIOD_LABEL})</th>
-                <th class="number-cell">전년 동기간(${PERIOD_LABEL}) 대비 증감액,(%)</th>
-                <th class="number-cell">계정 수</th>
+                ${th2('sum24', '2024년')}
+                ${th2('sum25', '2025년')}
+                ${th2('yoyPct', '24년→25년(증감율)')}
+                ${th2('sum25h1', `25년 누적(${PERIOD_LABEL})`)}
+                ${th2('sum26', `2026년(${PERIOD_LABEL})`)}
+                ${th2('h1Delta', `전년 동기간(${PERIOD_LABEL}) 대비 증감액,(%)`)}
+                ${th2('acctCount', '계정 수')}
             `;
             const h2 = document.getElementById('deptDetailHeader');
             if (h2) h2.innerHTML = `
@@ -937,7 +1003,7 @@
 
         function renderDeptRanking() {
             const stats = computeDeptStats().filter(s => s.total !== 0);
-            stats.sort((a, b) => Math.abs(b.sum26) - Math.abs(a.sum26));
+            stats.sort((a, b) => (tab2SortValue(a, tab2Sort.key) - tab2SortValue(b, tab2Sort.key)) * tab2Sort.dir);
 
             document.getElementById('deptRankingTable').innerHTML = stats.map(s => {
                 // YoY 표시 (24→25)
