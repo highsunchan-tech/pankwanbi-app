@@ -498,10 +498,8 @@
                     g.y26 += a.y26sum;
                     g.y25h1 += a.y25h1sum;
                 });
-                g.size = g.y24 + g.y25 + g.y26;
-                g.accounts.sort((x,y) =>
-                    (y.y24sum + y.y25sum + y.y26sum) - (x.y24sum + x.y25sum + x.y26sum)
-                );
+                g.size = g.y26;
+                g.accounts.sort((x,y) => y.y26sum - x.y26sum);
             });
             arr.sort((x,y) => y.size - x.size);
             return arr;
@@ -939,7 +937,7 @@
 
         function renderDeptRanking() {
             const stats = computeDeptStats().filter(s => s.total !== 0);
-            stats.sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+            stats.sort((a, b) => Math.abs(b.sum26) - Math.abs(a.sum26));
 
             document.getElementById('deptRankingTable').innerHTML = stats.map(s => {
                 // YoY 표시 (24→25)
