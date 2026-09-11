@@ -57,7 +57,7 @@
     <header class="bg-gradient-to-r from-blue-900 to-blue-800 text-white py-4 shadow-lg">
         <div class="max-w-full mx-auto px-6">
             <h1 class="text-3xl font-bold">📊 판관비 분석 대시보드</h1>
-            <p class="text-blue-100 text-sm mt-1">2024년 1월 ~ 2026년 5월 | 208개 계정 | 17개 상위부서 | 실제 운영 데이터</p>
+            <p class="text-blue-100 text-sm mt-1" id="header-subtitle">2024년 1월 ~ 2026년 5월 | 208개 계정 | 17개 상위부서 | 실제 운영 데이터</p>
         </div>
     </header>
 
@@ -174,9 +174,9 @@
             <!-- 부서별 상세 분석 테이블 -->
             <div id="dept-ranking-view">
                 <div class="bg-white rounded-lg shadow-md p-4">
-                    <h2 class="text-lg font-bold text-gray-800 mb-3">🏢 부서별 비용 분석 (YoY 포함) <span class="text-sm font-normal text-blue-700">— 기준: 2026년 5월 마감 (1~5월 누적)</span></h2>
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">🏢 부서별 비용 분석 (YoY 포함) <span class="text-sm font-normal text-blue-700" id="dept-header-period">— 기준: 2026년 5월 마감 (1~5월 누적)</span></h2>
                     <div class="text-xs text-gray-500 mb-3">
-                        <span>📌 YoY 분석 (24→25) | 25년→26년(전년동기, 1~5월): 26년 1~5월 누적 vs 25년 동기(1~5월) 비교</span>
+                        <span id="dept-header-yoy-note">📌 YoY 분석 (24→25) | 25년→26년(전년동기, 1~5월): 26년 1~5월 누적 vs 25년 동기(1~5월) 비교</span>
                     </div>
                     <div class="overflow-x-auto" style="max-height: 650px; overflow-y: auto;">
                         <table class="w-full text-xs">
@@ -216,7 +216,7 @@
                         <h2 class="text-lg font-bold text-gray-800" id="dept-detail-title">부서 상세 - 계정별 YoY 분석</h2>
                         <input type="text" id="dept-search" placeholder="계정명 검색..." class="px-3 py-1 border border-gray-300 rounded text-sm w-48" oninput="filterDeptDetailTable()">
                     </div>
-                    <div class="text-xs text-gray-500 mb-3">📌 기준: 2026년 5월 마감</div>
+                    <div class="text-xs text-gray-500 mb-3" id="dept-detail-period">📌 기준: 2026년 5월 마감</div>
                     <div class="overflow-x-auto" style="max-height: 650px; overflow-y: auto;">
                         <table class="w-full text-xs">
                             <thead class="sticky top-0">
@@ -242,7 +242,7 @@
                     <p class="text-xl font-bold text-purple-900" id="t3-2025">-</p>
                 </div>
                 <div class="bg-gradient-to-br from-teal-50 to-teal-100 p-4 rounded-lg border-2 border-teal-300">
-                    <p class="text-xs text-gray-600">당기 판관비 (26년 1~5월)</p>
+                    <p class="text-xs text-gray-600" id="t3-cur-label">당기 판관비 (26년 1~5월)</p>
                     <p class="text-xl font-bold text-teal-900" id="t3-cur">-</p>
                     <p class="text-xs text-gray-500" id="t3-cur-sub">-</p>
                 </div>
@@ -251,15 +251,15 @@
             <!-- 표1: 이상징후 (YoY, 전년 동기 대비) -->
             <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-4 shadow">
                 <h3 class="text-lg font-bold text-red-900 mb-1">🚨 이상징후 Top 5 — 전년 동기 대비(YoY) 증감률 상위</h3>
-                <p class="text-xs text-gray-600 mb-3">비교 기준: <strong>2025년 1~5월 → 2026년 1~5월</strong> (전년 동기·같은 5개월 누적) | 통제가능 계정 | 필터: 당기 3천만원↑ &amp; 증가액 1천만원↑ &amp; 증가율 25%↑ | <strong>증감률(%) 순 Top 5</strong></p>
+                <p class="text-xs text-gray-600 mb-3" id="t3-yoy-desc">비교 기준: <strong>2025년 1~5월 → 2026년 1~5월</strong> (전년 동기·같은 5개월 누적) | 통제가능 계정 | 필터: 당기 3천만원↑ &amp; 증가액 1천만원↑ &amp; 증가율 25%↑ | <strong>증감률(%) 순 Top 5</strong></p>
                 <div class="overflow-x-auto bg-white rounded border-2 border-red-200">
                     <table class="w-full text-xs">
                         <thead class="sticky top-0">
                             <tr>
                                 <th class="text-left">계정명</th>
                                 <th class="text-left">주요 부서(26년 누적 기준)</th>
-                                <th class="number-cell">2025년 1~5월<br>(전년 동기)</th>
-                                <th class="number-cell">2026년 1~5월<br>(당기)</th>
+                                <th class="number-cell" id="t3-yoy-th-prev">2025년 1~5월<br>(전년 동기)</th>
+                                <th class="number-cell" id="t3-yoy-th-cur">2026년 1~5월<br>(당기)</th>
                                 <th class="number-cell">증감액</th>
                                 <th class="number-cell">증감율(YoY)</th>
                             </tr>
@@ -274,15 +274,15 @@
             <!-- 표2: 당월 스파이크 (MoM, 전월 대비) -->
             <div class="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-4 mb-4 shadow">
                 <h3 class="text-lg font-bold text-orange-900 mb-1">📈 당월 스파이크 Top — 전월 대비(MoM) 급증</h3>
-                <p class="text-xs text-gray-600 mb-3">기준: 26년 <strong>5월(당월) vs 4월(전월)</strong> | 통제가능 계정 | 필터: 당월 500만원↑ &amp; 증가액 500만원↑ &amp; 증가율 50%↑ | 증가액 순</p>
+                <p class="text-xs text-gray-600 mb-3" id="t3-mom-desc">기준: 26년 <strong>5월(당월) vs 4월(전월)</strong> | 통제가능 계정 | 필터: 당월 500만원↑ &amp; 증가액 500만원↑ &amp; 증가율 50%↑ | 증가액 순</p>
                 <div class="overflow-x-auto bg-white rounded border-2 border-orange-200">
                     <table class="w-full text-xs">
                         <thead class="sticky top-0">
                             <tr>
                                 <th class="text-left">계정명</th>
                                 <th class="text-left">주요 부서(26년 누적 기준)</th>
-                                <th class="number-cell">26년 4월(전월)</th>
-                                <th class="number-cell">26년 5월(당월)</th>
+                                <th class="number-cell" id="t3-mom-th-prev">26년 4월(전월)</th>
+                                <th class="number-cell" id="t3-mom-th-cur">26년 5월(당월)</th>
                                 <th class="number-cell">증감액</th>
                                 <th class="number-cell">증감율(MoM)</th>
                             </tr>
@@ -351,6 +351,16 @@
         // 누적 기간 라벨 (예: "1~6월", "1~7월")
         const PERIOD_LABEL = `1~${N26}월`;
 
+        // 헤더/부제목의 "N월까지" 문구를 N26 기준으로 자동 갱신
+        document.getElementById('header-subtitle').textContent =
+            `2024년 1월 ~ 2026년 ${N26}월 | ${ACCOUNTS.length}개 계정 | 17개 상위부서 | 실제 운영 데이터`;
+        document.getElementById('dept-header-period').textContent =
+            `— 기준: 2026년 ${N26}월 마감 (${PERIOD_LABEL} 누적)`;
+        document.getElementById('dept-header-yoy-note').textContent =
+            `📌 YoY 분석 (24→25) | 25년→26년(전년동기, ${PERIOD_LABEL}): 26년 ${PERIOD_LABEL} 누적 vs 25년 동기(${PERIOD_LABEL}) 비교`;
+        document.getElementById('dept-detail-period').textContent =
+            `📌 기준: 2026년 ${N26}월 마감`;
+
         // 계정별 파생 합계 미리 계산
         ACCOUNTS.forEach(a => {
             a.y24sum = sum(a.y24);              // 2024 연간
@@ -408,7 +418,7 @@
             const yoyText = yoy >= 0 ? `+${yoy.toFixed(1)}%` : `${yoy.toFixed(1)}%`;
             document.getElementById('kpi2yoy').textContent = `(전년비 ${yoyText})`;
 
-            document.getElementById('kpi3label').textContent = '2026년 누적(5월까지)';
+            document.getElementById('kpi3label').textContent = `2026년 누적(${N26}월까지)`;
             document.getElementById('kpi3').textContent = fmtEok(total26);
             const h1_yoy = total25 !== 0 ? ((total26 / total25 - 1) * 100) : 0;
             const h1_yoyText = h1_yoy >= 0 ? `+${h1_yoy.toFixed(1)}%` : `${h1_yoy.toFixed(1)}%`;
@@ -1105,6 +1115,19 @@
             const curIdx = N26 - 1;              // 당월 인덱스 (5월 → 4)
             const prevIdx = N26 - 2;             // 전월 인덱스 (4월 → 3)
             const cumLabel = `1~${N26}월`;
+            const curMonthLabel = `${N26}월`;
+            const prevMonthLabel = `${N26 - 1}월`;
+
+            // 기간 라벨들을 N26 기준으로 자동 갱신
+            document.getElementById('t3-cur-label').textContent = `당기 판관비 (26년 ${cumLabel})`;
+            document.getElementById('t3-yoy-desc').innerHTML =
+                `비교 기준: <strong>2025년 ${cumLabel} → 2026년 ${cumLabel}</strong> (전년 동기·같은 ${N26}개월 누적) | 통제가능 계정 | 필터: 당기 3천만원↑ & 증가액 1천만원↑ & 증가율 25%↑ | <strong>증감률(%) 순 Top 5</strong>`;
+            document.getElementById('t3-yoy-th-prev').innerHTML = `2025년 ${cumLabel}<br>(전년 동기)`;
+            document.getElementById('t3-yoy-th-cur').innerHTML = `2026년 ${cumLabel}<br>(당기)`;
+            document.getElementById('t3-mom-desc').innerHTML =
+                `기준: 26년 <strong>${curMonthLabel}(당월) vs ${prevMonthLabel}(전월)</strong> | 통제가능 계정 | 필터: 당월 500만원↑ & 증가액 500만원↑ & 증가율 50%↑ | 증가액 순`;
+            document.getElementById('t3-mom-th-prev').textContent = `26년 ${prevMonthLabel}(전월)`;
+            document.getElementById('t3-mom-th-cur').textContent = `26년 ${curMonthLabel}(당월)`;
 
             // --- 전체 집계 ---
             const total24 = ACCOUNTS.reduce((s, a) => s + sum(a.y24), 0);
