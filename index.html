@@ -250,8 +250,8 @@
 
             <!-- 표1: 이상징후 (YoY, 전년 동기 대비) -->
             <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-4 shadow">
-                <h3 class="text-lg font-bold text-red-900 mb-1">🚨 이상징후 Top 5 — 전년 동기 대비(YoY) 증감률 상위 <span class="text-xs font-normal text-gray-500">(단위: 백만원)</span></h3>
-                <p class="text-xs text-gray-600 mb-3" id="t3-yoy-desc">비교 기준: <strong>2025년 1~5월 → 2026년 1~5월</strong> (전년 동기·같은 5개월 누적) | 통제가능 계정 | 필터: 당기 3천만원↑ &amp; 증가액 1천만원↑ &amp; 증가율 25%↑ | <strong>증감률(%) 순 Top 5</strong></p>
+                <h3 class="text-lg font-bold text-red-900 mb-1">🚨 이상징후 Top 5 — 전년 동기 대비(YoY) 증감액 상위 <span class="text-xs font-normal text-gray-500">(단위: 백만원)</span></h3>
+                <p class="text-xs text-gray-600 mb-3" id="t3-yoy-desc">통제가능 계정 | 필터: 당기 3천만원↑ &amp; 증가액 1천만원↑ &amp; 증가율 25%↑ | <strong>증감액 순 Top 5</strong></p>
                 <div class="overflow-x-auto bg-white rounded border-2 border-red-200">
                     <table class="w-full text-xs">
                         <thead class="sticky top-0">
@@ -476,6 +476,7 @@
         // 상위계정 = 계정명에서 "(" 앞부분 (예: 복리후생비(판)-건강보험료 → 복리후생비)
         let TAB1_GROUPS = [];
         let _tab1TopOpen = false;
+        let _tab1OpenGroups = new Set(); // 펼쳐놓은 그룹명 — 정렬 시에도 유지
 
         function buildParentGroups() {
             const map = {};
@@ -598,16 +599,20 @@
                 sortByTab1(g.accounts, a => a.y24sum, a => a.y25sum, a => a.y26sum, a => a.y25h1sum);
             });
 
+            // 정렬 등으로 표를 다시 그려도 펼쳐놓은 그룹은 그대로 유지 (그룹명 기준으로 기억)
+            if (searching) _tab1TopOpen = true;
+            const topOpen = _tab1TopOpen || searching;
+
             let rows = '';
             // Level 1: 판매비와관리비 (전체)
             rows += `<tr class="cursor-pointer bg-blue-900 text-white font-bold" onclick="toggleTop()">`
-                  + rowCells('📦 판매비와관리비 (전체 판관비)', g24, g25, gm26, g26, g25h1, 0, 'text-white', searching ? '▼' : '▶')
+                  + rowCells('📦 판매비와관리비 (전체 판관비)', g24, g25, gm26, g26, g25h1, 0, 'text-white', topOpen ? '▼' : '▶')
                   + `</tr>`;
 
             // Level 2 + Level 3
             groups.forEach((g, gi) => {
-                const open = searching;
-                rows += `<tr class="tab1-group cursor-pointer bg-blue-50 font-semibold ${searching ? '' : 'hidden'}" data-gi="${gi}" onclick="toggleGroup(${gi})">`
+                const open = searching || _tab1OpenGroups.has(g.name);
+                rows += `<tr class="tab1-group cursor-pointer bg-blue-50 font-semibold ${topOpen ? '' : 'hidden'}" data-gi="${gi}" data-gname="${g.name}" onclick="toggleGroup(${gi})">`
                       + rowCells(`${g.name} <span class="text-gray-400 font-normal">(${g.accounts.length})</span>`, g.y24, g.y25, g.m26, g.y26, g.y25h1, 1, '', open ? '▼' : '▶')
                       + `</tr>`;
                 g.accounts.forEach(a => {
@@ -618,7 +623,6 @@
             });
 
             document.getElementById('timeSeriesTable').innerHTML = rows;
-            _tab1TopOpen = searching;
         }
 
         function toggleTop() {
@@ -628,6 +632,7 @@
             if (!open) {
                 document.querySelectorAll('#timeSeriesTable .tab1-detail').forEach(r => r.classList.add('hidden'));
                 document.querySelectorAll('#timeSeriesTable .tab1-group .arw').forEach(a => a.textContent = '▶');
+                _tab1OpenGroups.clear();
             }
             const topArw = document.querySelector('#timeSeriesTable tr:first-child .arw');
             if (topArw) topArw.textContent = open ? '▼' : '▶';
@@ -640,6 +645,8 @@
             details.forEach(r => r.classList.toggle('hidden', isOpen));
             const arw = groupRow ? groupRow.querySelector('.arw') : null;
             if (arw) arw.textContent = isOpen ? '▶' : '▼';
+            const gname = groupRow ? groupRow.getAttribute('data-gname') : null;
+            if (gname) { if (isOpen) _tab1OpenGroups.delete(gname); else _tab1OpenGroups.add(gname); }
         }
 
         // 요약 박스(TOP5) 클릭 시 시계열 표에서 해당 계정 행으로 이동 + 하이라이트
@@ -657,7 +664,11 @@
             const gi = row.getAttribute('data-gi');
             document.querySelectorAll(`#timeSeriesTable .tab1-detail[data-gi="${gi}"]`).forEach(r => r.classList.remove('hidden'));
             const groupRow = document.querySelector(`#timeSeriesTable .tab1-group[data-gi="${gi}"]`);
-            if (groupRow) { const arw = groupRow.querySelector('.arw'); if (arw) arw.textContent = '▼'; }
+            if (groupRow) {
+                const arw = groupRow.querySelector('.arw'); if (arw) arw.textContent = '▼';
+                const gname = groupRow.getAttribute('data-gname');
+                if (gname) _tab1OpenGroups.add(gname);
+            }
 
             row.scrollIntoView({ behavior: 'smooth', block: 'center' });
             row.classList.add('acct-highlight');
@@ -677,7 +688,10 @@
         }
 
         function expandAllGroups() {
-            // 모든 그룹 펼치기 (금액 내림차순으로 정렬됨)
+            // 모든 그룹 펼치기 (정렬 기준 유지됨)
+            _tab1TopOpen = true;
+            TAB1_GROUPS.forEach(g => _tab1OpenGroups.add(g.name));
+            document.querySelectorAll('#timeSeriesTable .tab1-group').forEach(r => r.classList.remove('hidden'));
             document.querySelectorAll('#timeSeriesTable .tab1-group').forEach(groupRow => {
                 const gi = groupRow.getAttribute('data-gi');
                 const details = document.querySelectorAll(`#timeSeriesTable .tab1-detail[data-gi="${gi}"]`);
@@ -685,10 +699,13 @@
                 const arw = groupRow.querySelector('.arw');
                 if (arw) arw.textContent = '▼';
             });
+            const topArw = document.querySelector('#timeSeriesTable tr:first-child .arw');
+            if (topArw) topArw.textContent = '▼';
         }
 
         function collapseAllGroups() {
-            // 모든 그룹 접기
+            // 모든 그룹 접기 (최상위는 열린 채 유지)
+            _tab1OpenGroups.clear();
             document.querySelectorAll('#timeSeriesTable .tab1-group').forEach(groupRow => {
                 const gi = groupRow.getAttribute('data-gi');
                 const details = document.querySelectorAll(`#timeSeriesTable .tab1-detail[data-gi="${gi}"]`);
@@ -1187,7 +1204,7 @@
             // 기간 라벨들을 N26 기준으로 자동 갱신
             document.getElementById('t3-cur-label').textContent = `당기 판관비 (26년 ${cumLabel})`;
             document.getElementById('t3-yoy-desc').innerHTML =
-                `비교 기준: <strong>2025년 ${cumLabel} → 2026년 ${cumLabel}</strong> (전년 동기·같은 ${N26}개월 누적) | 통제가능 계정 | 필터: 당기 3천만원↑ & 증가액 1천만원↑ & 증가율 25%↑ | <strong>증감률(%) 순 Top 5</strong>`;
+                `통제가능 계정 | 필터: 당기 3천만원↑ & 증가액 1천만원↑ & 증가율 25%↑ | <strong>증감액 순 Top 5</strong>`;
             document.getElementById('t3-yoy-th-prev').innerHTML = `2025년 ${cumLabel}<br>(전년 동기)`;
             document.getElementById('t3-yoy-th-cur').innerHTML = `2026년 ${cumLabel}<br>(당기)`;
             document.getElementById('t3-mom-desc').innerHTML =
